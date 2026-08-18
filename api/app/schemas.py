@@ -52,3 +52,28 @@ class AnalysisReport(BaseModel):
 
 class AnalysisRequest(BaseModel):
     refresh: bool = False
+
+
+class NewsAnalysisRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=20)
+    company: str = Field(min_length=1, max_length=100)
+    text: str = Field(min_length=40, max_length=30000)
+    source_url: str | None = None
+
+
+class NewsAnalysisReport(BaseModel):
+    symbol: str
+    sentiment: str
+    sentiment_score: float = Field(ge=0, le=100)
+    relevance: float = Field(ge=0, le=100)
+    materiality: str
+    event_type: str
+    impact_horizon: str
+    confidence: float = Field(ge=0, le=100)
+    score_adjustment: float = Field(ge=-8, le=8)
+    summary: str
+    key_evidence: list[str] = Field(min_length=1, max_length=3)
+    bull_case: str
+    bear_case: str
+    watch_items: list[str] = Field(min_length=2, max_length=4)
+    engine: str

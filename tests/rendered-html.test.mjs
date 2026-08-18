@@ -26,3 +26,12 @@ test("종목 상세와 포트폴리오를 서버 렌더링한다", async () => {
   assert.match(await detail.text(), /SENIOR ANALYST REPORT|AI 재분석/);
   assert.match(await portfolio.text(), /보유종목/);
 });
+
+test("뉴스 분석실을 서버 렌더링한다", async () => {
+  const response = await render("/news");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /NEWS ANALYSIS LAB/);
+  assert.match(html, /뉴스 분석하기/);
+  assert.match(html, /추천점수 조정/);
+});

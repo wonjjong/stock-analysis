@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "오늘의 시그널", icon: "⌁" },
   { href: "/portfolio", label: "내 포트폴리오", icon: "◫" },
   { href: "/stock/005930", label: "종목 리서치", icon: "⌕" },
+  { href: "/news", label: "뉴스 분석실", icon: "N" },
 ];
 
 export function Navigation() {

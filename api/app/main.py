@@ -3,7 +3,8 @@ from fastapi import FastAPI, HTTPException
 from app.config import get_settings
 from app.domain.recommendation import rank_candidates
 from app.providers.mock import MOCK_CANDIDATES, MOCK_REGIME
-from app.schemas import AnalysisRequest, Evidence, Recommendation
+from app.schemas import AnalysisRequest, Evidence, NewsAnalysisReport, NewsAnalysisRequest, Recommendation
+from app.services.news_analysis import analyze_news
 from app.services.openai_analysis import create_report
 
 app = FastAPI(title="Signalist API", version="0.1.0")
@@ -32,3 +33,8 @@ async def analyze(symbol: str, request: AnalysisRequest):
     evidence = [Evidence(kind="market", title="정량 추천 스냅샷", source="Signalist factor engine", observed_at=rec.as_of, available_at=rec.as_of)]
     report = await create_report(get_settings(), rec, evidence)
     return {"refresh": request.refresh, "status": "completed", "report": report}
+
+
+@app.post("/v1/news/analyses", response_model=NewsAnalysisReport)
+async def news_analysis(request: NewsAnalysisRequest):
+    return await analyze_news(get_settings(), request)
