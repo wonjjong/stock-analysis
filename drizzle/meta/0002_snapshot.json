@@ -1,9 +1,175 @@
 {
-  "id": "d76aade7-1c00-4baa-8852-4427457583b3",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "18f25894-8599-4015-a516-d8005b9b458c",
+  "prevId": "b6226647-570d-4843-b02e-1ea1f5b3cf4b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.llm_providers": {
+      "name": "llm_providers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_url": {
+          "name": "base_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "api_key": {
+          "name": "api_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 100
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "daily_limit": {
+          "name": "daily_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "used_today": {
+          "name": "used_today",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "usage_date_kst": {
+          "name": "usage_date_kst",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cooldown_until": {
+          "name": "cooldown_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_status": {
+          "name": "last_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'대기'"
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "success_count": {
+          "name": "success_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "failure_count": {
+          "name": "failure_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "llm_providers_name_unique": {
+          "name": "llm_providers_name_unique",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "llm_providers_order_idx": {
+          "name": "llm_providers_order_idx",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "priority",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.news_article_symbols": {
       "name": "news_article_symbols",
       "schema": "",
@@ -483,24 +649,24 @@
         },
         "keywords": {
           "name": "keywords",
-          "type": "text",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'"
+          "default": "'[]'::jsonb"
         },
         "sectors": {
           "name": "sectors",
-          "type": "text",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'"
+          "default": "'[]'::jsonb"
         },
         "evidence": {
           "name": "evidence",
-          "type": "text",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'"
+          "default": "'[]'::jsonb"
         },
         "sentiment": {
           "name": "sentiment",
@@ -605,6 +771,36 @@
           "isUnique": true,
           "concurrently": false,
           "method": "btree",
+          "with": {}
+        },
+        "news_insights_keywords_gin": {
+          "name": "news_insights_keywords_gin",
+          "columns": [
+            {
+              "expression": "keywords",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "news_insights_sectors_gin": {
+          "name": "news_insights_sectors_gin",
+          "columns": [
+            {
+              "expression": "sectors",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
           "with": {}
         }
       },

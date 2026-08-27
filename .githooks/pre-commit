@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# 민감정보가 커밋되는 것을 막는다. gitignore 는 "실수로 add 하지 않으면" 지켜주지만
+# `git add -f` 나 새 파일명에는 무력하므로, 스테이징된 내용을 직접 검사한다.
+#
+# 활성화:  git config core.hooksPath .githooks
+# 우회:    git commit --no-verify   (정말 필요할 때만)
+
+set -uo pipefail
+
+fail=0
+red() { printf '\033[31m%s\033[0m\n' "$*"; }
+yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+# ── 1. 올라가면 안 되는 파일 이름
+while IFS= read -r file; do
+  case "$file" in
+    .env|.env.local|.env.*.local|.env.production|.env.development)
+      red "✖ $file — 환경변수 파일은 커밋하지 마세요. .env.example 만 올립니다."; fail=1 ;;
+    *.dump|*.sql.gz|*.sqlite|*.sqlite3)
+      red "✖ $file — DB 덤프에는 llm_providers 의 API 키가 들어 있습니다."; fail=1 ;;
+    *id_rsa*|*id_ed25519*|*.pem|*.p12|*.pfx|*.keystore|*.jks)
+      red "✖ $file — 키·인증서 파일입니다."; fail=1 ;;
+    */credentials.json|credentials.json|*serviceAccount*.json)
+      red "✖ $file — 서비스 계정 자격증명입니다."; fail=1 ;;
+  esac
+done <<< "$staged"
+
+# ── 2. 스테이징된 내용의 키 패턴
+#    각 항목: 이름|정규식
+patterns=(
+  'OpenAI 키|sk-[A-Za-z0-9_-]{20,}'
+  'Anthropic 키|sk-ant-[A-Za-z0-9_-]{20,}'
+  'Google API 키|AIza[A-Za-z0-9_-]{33}'
+  'Groq 키|gsk_[A-Za-z0-9]{40,}'
+  'OpenRouter 키|sk-or-v1-[a-f0-9]{40,}'
+  'AWS 액세스 키|(A3T[A-Z0-9]|AKIA|ASIA)[A-Z0-9]{16}'
+  'GitHub 토큰|gh[pousr]_[A-Za-z0-9]{36,}'
+  'Slack 토큰|xox[abprs]-[A-Za-z0-9-]{10,}'
+  'DB 접속 문자열(비밀번호 포함)|postgres(ql)?://[^:@/ ]+:[^@/ ]{8,}@'
+  'Private key 블록|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+)
+
+for entry in "${patterns[@]}"; do
+  name="${entry%%|*}"; regex="${entry#*|}"
+  # .env.example 과 이 훅 자신은 검사 대상에서 뺀다(플레이스홀더·패턴 정의가 걸린다).
+  hits=$(git diff --cached -U0 -- . ':(exclude).env.example' ':(exclude).githooks/pre-commit' \
+         | grep -E '^\+' | grep -nEI -e "$regex" || true)
+  if [ -n "$hits" ]; then
+    red "✖ $name 로 보이는 값이 스테이징되었습니다:"
+    echo "$hits" | head -3 | sed 's/^/    /'
+    fail=1
+  fi
+done
+
+# ── 3. localhost 가 아닌 DB 호스트가 추적 파일에 박혀 있는지 (경고만)
+prod_db=$(git diff --cached -U0 -- . ':(exclude).env.example' \
+          | grep -E '^\+' | grep -EI -e 'postgres(ql)?://' | grep -vE 'localhost|127\.0\.0\.1|@postgres[:/ ]' || true)
+if [ -n "$prod_db" ]; then
+  yellow "⚠ localhost 가 아닌 DB 접속 문자열이 있습니다. 의도한 것인지 확인하세요:"
+  echo "$prod_db" | head -3 | sed 's/^/    /'
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo
+  red "커밋을 중단했습니다."
+  echo "  값을 .env 로 옮기고 코드에서는 환경변수로 읽으세요."
+  echo "  오탐이라면: git commit --no-verify"
+  exit 1
+fi
+
+exit 0

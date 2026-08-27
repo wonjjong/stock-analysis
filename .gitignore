@@ -15,7 +15,6 @@
 
 # next.js
 /.next/
-/.vinext/
 /out/
 
 # misc
@@ -35,7 +34,30 @@ yarn-error.log*
 # vercel
 .vercel
 
-/dist/
-/.wrangler/
 /outputs/
 /work/
+*.tsbuildinfo
+/data/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.sqlite3
+db.sqlite3
+local_settings.py
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+staticfiles/
+media/
+
+# DB 덤프 — llm_providers 에 API 키가 들어 있다
+*.dump
+*.sql.gz
+
+# 동일성 검증용으로 내려받은 실제 언론사 페이지 원문. 전문을 저장소에 두지 않는다
+# (README 데이터 수집 원칙과 같은 이유). 재생성:
+#   node scripts/harvest-parity.mjs --live
+/tests/parity/pages/

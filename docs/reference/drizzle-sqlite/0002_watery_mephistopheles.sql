@@ -1,0 +1,1 @@
+ALTER TABLE `news_sources` ADD `max_pages` integer DEFAULT 1 NOT NULL;

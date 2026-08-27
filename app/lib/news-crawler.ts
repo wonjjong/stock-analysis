@@ -1,7 +1,10 @@
+import type { SqlDatabase } from "../../db/sql";
 import { analyzeNewsLocally } from "./news-analysis";
 
 const MAX_FEED_BYTES = 2_500_000;
-const MAX_ITEMS_PER_RUN = 60;
+const MAX_ITEMS_PER_PAGE = 60;
+const MAX_ITEMS_PER_RUN = 200;
+const MAX_PAGES_PER_RUN = 10;
 const USER_AGENT = "SignalistResearchBot/1.1 (+daily public news indexer; owner-managed sources)";
 
 type SourceRow = {
@@ -10,6 +13,8 @@ type SourceRow = {
   url: string;
   resolved_url: string | null;
   crawl_hour_kst: number;
+  max_pages: number;
+  window_hours: number;
   etag: string | null;
   last_modified: string | null;
 };
@@ -25,7 +30,7 @@ export type CrawlResult = {
   sourceId: number;
   fetchedCount: number;
   insertedCount: number;
-  status: "완료" | "변경 없음" | "오늘 기사 없음";
+  status: "완료" | "변경 없음" | "새 기사 없음";
 };
 
 function decodeXml(value: string) {
@@ -58,53 +63,131 @@ function tag(block: string, names: string[]) {
   return "";
 }
 
+// Listing pages hand out the same article under per-section or per-campaign
+// query strings, so strip them before the canonical-url uniqueness check.
+const TRACKING_PARAMS = new Set([
+  "gclid", "fbclid", "igshid", "spm", "mc_cid", "mc_eid",
+  "section", "ref", "referer", "referrer", "from", "cp", "input", "sid",
+]);
+
 function absoluteArticleUrl(value: string, baseUrl: string) {
   try {
     const url = new URL(decodeXml(value).trim(), baseUrl);
     url.hash = "";
-    ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"].forEach((key) => url.searchParams.delete(key));
+    for (const key of [...url.searchParams.keys()]) {
+      if (key.startsWith("utm_") || TRACKING_PARAMS.has(key.toLowerCase())) url.searchParams.delete(key);
+    }
     return url.toString();
   } catch {
     return "";
   }
 }
 
+const EXPLICIT_ZONE = /(?:Z|[+-]\d{2}:?\d{2}|\b(?:GMT|UTC|UT|KST|JST|CET|CEST|BST|[ECMP][SD]T)\b)/i;
+
+/**
+ * Feed timestamps that name a zone are absolute. Zone-less ones ("2026-08-27
+ * 19:28:10", common in Korean CMS feeds) are NOT: `Date.parse` would read them
+ * in the runtime's local zone, which is KST in dev but UTC on Workers, pushing
+ * every article nine hours into the future in production. Read those as KST.
+ */
 function parseDate(value: string) {
-  const time = Date.parse(cleanText(value, 120));
-  return Number.isFinite(time) ? time : null;
+  const compact = cleanText(value, 120);
+  if (!compact) return null;
+  if (EXPLICIT_ZONE.test(compact)) {
+    const time = Date.parse(compact);
+    if (Number.isFinite(time)) return time;
+  }
+  return parseVisibleDate(compact);
 }
 
 export function dateKst(time = Date.now()) {
   return new Date(time + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-function parseVisibleDate(value: string, now = Date.now()) {
-  const compact = cleanText(value, 400);
+export const DEFAULT_WINDOW_HOURS = 36;
+const MIN_WINDOW_HOURS = 6;
+const MAX_WINDOW_HOURS = 168;
+// Publishers stamp a few minutes ahead now and then; do not discard those.
+const CLOCK_SKEW_MS = 2 * 60 * 60 * 1000;
+
+export function clampWindowHours(hours: number) {
+  const value = Math.trunc(hours);
+  return Number.isFinite(value) && value > 0 ? Math.max(MIN_WINDOW_HOURS, Math.min(MAX_WINDOW_HOURS, value)) : DEFAULT_WINDOW_HOURS;
+}
+
+/**
+ * Keeps recently published items rather than items whose KST calendar date
+ * equals today. A US wire publishing at 16:00 ET lands on either side of the
+ * KST date line depending on the hour, so a same-day test silently dropped
+ * most foreign coverage; a rolling window that overlaps the daily schedule
+ * cannot leave a gap, and the canonical-url index absorbs the overlap.
+ */
+export function selectRecentItems(items: FeedItem[], now: number, windowHours = DEFAULT_WINDOW_HOURS) {
+  const oldest = now - clampWindowHours(windowHours) * 60 * 60 * 1000;
+  return items.filter((item) => item.publishedAt !== null && item.publishedAt >= oldest && item.publishedAt <= now + CLOCK_SKEW_MS);
+}
+
+const VISIBLE_TEXT_LIMIT = 12_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function kstTimestamp(year: number, month: number, day: number, hour: number, minute: number, second = 0) {
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) return null;
+  const time = Date.UTC(year, month - 1, day, hour - 9, minute, second);
+  return Number.isFinite(time) ? time : null;
+}
+
+// Listings print "08-27 18:18" with no year. Assume the current KST year and
+// step back one year when that lands in the future (turn-of-year listings).
+function yearlessTimestamp(month: number, day: number, hour: number, minute: number, now: number) {
+  const year = new Date(now + KST_OFFSET_MS).getUTCFullYear();
+  const time = kstTimestamp(year, month, day, hour, minute);
+  if (time === null) return null;
+  return time - now > DAY_MS ? kstTimestamp(year - 1, month, day, hour, minute) : time;
+}
+
+/**
+ * Reads a publication time out of visible listing text. Every branch matches a
+ * concrete date token: a blind `Date.parse` of the surrounding blob used to
+ * turn article ids and scores into plausible-looking timestamps.
+ */
+export function parseVisibleDate(value: string, now = Date.now()) {
+  const compact = cleanText(value, VISIBLE_TEXT_LIMIT);
   if (!compact) return null;
-  if (/오늘|today/i.test(compact)) return now;
-  const relative = compact.match(/(\d+)\s*(분|시간|minute|minutes|hour|hours)\s*(전|ago)?/i);
+
+  const zoned = compact.match(/\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?\s*(?:Z|[+-]\d{2}:?\d{2})/i)
+    ?? compact.match(/[A-Z][a-z]{2},\s*\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}\s+\d{2}:\d{2}(?::\d{2})?\s*(?:GMT|UTC|[+-]\d{4})/);
+  if (zoned) {
+    const time = Date.parse(zoned[0]);
+    if (Number.isFinite(time)) return time;
+  }
+
+  const relative = compact.match(/(\d{1,3})\s*(분|시간|minute|minutes|hour|hours)\s*(?:전|ago)/i);
   if (relative) {
     const unit = /분|minute/i.test(relative[2]) ? 60_000 : 3_600_000;
     return now - Number(relative[1]) * unit;
   }
-  if (/T\d{2}:\d{2}|(?:GMT|UTC)|Z(?:\s|$)|[+-]\d{2}:?\d{2}/i.test(compact)) {
-    const zoned = Date.parse(compact);
-    if (Number.isFinite(zoned)) return zoned;
+
+  const todayClock = compact.match(/(?:오늘|today)\s*(\d{1,2}):(\d{2})/i);
+  if (todayClock) {
+    const kst = new Date(now + KST_OFFSET_MS);
+    return kstTimestamp(kst.getUTCFullYear(), kst.getUTCMonth() + 1, kst.getUTCDate(), Number(todayClock[1]), Number(todayClock[2]));
   }
-  const isoLike = compact.match(/(20\d{2})[./-](\d{1,2})[./-](\d{1,2})(?:\s+|T)?(\d{1,2})?:?(\d{2})?/);
-  if (isoLike) return Date.UTC(Number(isoLike[1]), Number(isoLike[2]) - 1, Number(isoLike[3]), Number(isoLike[4] ?? 0) - 9, Number(isoLike[5] ?? 0));
-  const short = compact.match(/(?:^|\s)(\d{1,2})[./-](\d{1,2})(?:\s+(\d{1,2}):?(\d{2})?)?/);
-  if (short) {
-    const current = new Date(now + 9 * 60 * 60 * 1000);
-    return Date.UTC(current.getUTCFullYear(), Number(short[1]) - 1, Number(short[2]), Number(short[3] ?? 0) - 9, Number(short[4] ?? 0));
-  }
-  const korean = compact.match(/(\d{1,2})월\s*(\d{1,2})일(?:\s*(\d{1,2})시)?/);
-  if (korean) {
-    const current = new Date(now + 9 * 60 * 60 * 1000);
-    return Date.UTC(current.getUTCFullYear(), Number(korean[1]) - 1, Number(korean[2]), Number(korean[3] ?? 0) - 9);
-  }
-  const parsed = Date.parse(compact);
-  return Number.isFinite(parsed) ? parsed : null;
+  if (/(?:^|[^가-힣a-z])(오늘|today)(?:[^가-힣a-z]|$)/i.test(compact)) return now;
+
+  const full = compact.match(/(20\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (full) return kstTimestamp(Number(full[1]), Number(full[2]), Number(full[3]), Number(full[4] ?? 0), Number(full[5] ?? 0), Number(full[6] ?? 0));
+
+  // Year-less numeric form must carry a clock, otherwise any "12-3" in body
+  // copy would register as a publication date.
+  const short = compact.match(/(?:^|[^\d])(\d{1,2})[.-](\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  if (short) return yearlessTimestamp(Number(short[1]), Number(short[2]), Number(short[3]), Number(short[4]), now);
+
+  const korean = compact.match(/(\d{1,2})월\s*(\d{1,2})일(?:\s*(\d{1,2})시(?:\s*(\d{1,2})분)?)?/);
+  if (korean) return yearlessTimestamp(Number(korean[1]), Number(korean[2]), Number(korean[3] ?? 0), Number(korean[4] ?? 0), now);
+
+  return null;
 }
 
 export function parseFeed(xml: string, feedUrl: string): FeedItem[] {
@@ -112,6 +195,8 @@ export function parseFeed(xml: string, feedUrl: string): FeedItem[] {
   const atomBlocks = [...xml.matchAll(/<entry(?:\s[^>]*)?>([\s\S]*?)<\/entry>/gi)].map((match) => match[1]);
   const blocks = rssBlocks.length ? rssBlocks : atomBlocks;
 
+  // A feed is one document rather than one page of a listing, so it gets the
+  // whole per-run budget instead of the per-page slice.
   return blocks.slice(0, MAX_ITEMS_PER_RUN).flatMap((block) => {
     const title = cleanText(tag(block, ["title"]), 500);
     const rssLink = tag(block, ["link", "guid"]);
@@ -150,9 +235,57 @@ function jsonLdItems(html: string, pageUrl: string): FeedItem[] {
   return items;
 }
 
+const DATE_ATTRIBUTE = /<[^>]*\b(?:datetime|data-date|data-published|data-time)=["']([^"']+)["'][^>]*>/i;
+const DATE_META = /<meta\b[^>]*\b(?:itemprop|property|name)=["'][^"']*(?:datePublished|published_time|pubdate|date)[^"']*["'][^>]*\bcontent=["']([^"']+)["']/i;
+const DATE_ELEMENT = /<(\w+)\b[^>]*(?:class|id)=["'][^"']*(?:time|date|pubdt)[^"']*["'][^>]*>([\s\S]{0,200}?)<\/\1>/gi;
+
+/**
+ * Listing markup parks the stamp in its own element (`<span class="txt-time">`)
+ * that often sits *after* a full-length lead paragraph, so read the dedicated
+ * date elements before falling back to scanning the whole block.
+ */
 function dateFromHtml(block: string, now = Date.now()) {
-  const attribute = block.match(/<(?:time|meta)\b[^>]*(?:datetime|content|data-date|data-published)=["']([^"']+)["'][^>]*>/i)?.[1];
-  return parseVisibleDate(attribute || block, now);
+  const attribute = block.match(DATE_ATTRIBUTE)?.[1] ?? block.match(DATE_META)?.[1];
+  if (attribute) {
+    const tagged = parseVisibleDate(attribute, now);
+    if (tagged) return tagged;
+  }
+  for (const match of block.matchAll(DATE_ELEMENT)) {
+    const stamped = parseVisibleDate(match[2], now);
+    if (stamped) return stamped;
+  }
+  return parseVisibleDate(block, now);
+}
+
+const ITEM_BOUNDARY = /<\/?(?:li|article|aside|section|nav|ul|ol|table|tr)\b[^>]*>/gi;
+
+/**
+ * Slicing raw HTML at a character offset leaves half-open tags whose attribute
+ * values survive tag stripping, so an `<img src=".../2019/06/26/...">` cut in
+ * half reads as a publication date. Trim back to whole-tag boundaries.
+ */
+function alignToTags(raw: string, side: "head" | "tail") {
+  if (side === "head") {
+    const opening = raw.indexOf(">");
+    return opening < 0 ? "" : raw.slice(opening + 1);
+  }
+  const closing = raw.lastIndexOf("<");
+  return closing < 0 ? raw : raw.slice(0, closing);
+}
+
+/**
+ * Context around a bare anchor, clipped at the nearest list-item boundary.
+ * Without the clip a dateless "most read" link borrows the timestamp of the
+ * story rendered next to it and gets filed under the wrong day.
+ */
+function anchorContext(html: string, start: number, end: number) {
+  const rawHead = html.slice(Math.max(0, start - 320), start);
+  const rawTail = html.slice(end, Math.min(html.length, end + 320));
+  const lastBoundary = [...rawHead.matchAll(ITEM_BOUNDARY)].pop();
+  const head = lastBoundary ? rawHead.slice((lastBoundary.index ?? 0) + lastBoundary[0].length) : alignToTags(rawHead, "head");
+  const nextBoundary = new RegExp(ITEM_BOUNDARY.source, "i").exec(rawTail);
+  const tail = nextBoundary ? rawTail.slice(0, nextBoundary.index) : alignToTags(rawTail, "tail");
+  return `${head}${html.slice(start, end)}${tail}`;
 }
 
 function anchorItem(block: string, pageUrl: string, now: number): FeedItem | null {
@@ -180,14 +313,59 @@ export function parseNewsPage(html: string, pageUrl: string, now = Date.now()): 
     const title = cleanText(match[2], 500);
     if (title.length < 12) continue;
     const index = match.index ?? 0;
-    const context = html.slice(Math.max(0, index - 320), Math.min(html.length, index + match[0].length + 320));
+    const context = anchorContext(html, index, index + match[0].length);
     const publishedAt = dateFromHtml(context, now);
     const url = absoluteArticleUrl(match[1], pageUrl);
     if (url && publishedAt) candidates.push({ title, url, excerpt: "", publishedAt });
   }
   const unique = new Map<string, FeedItem>();
   for (const item of candidates) if (!unique.has(item.url)) unique.set(item.url, item);
-  return [...unique.values()].slice(0, MAX_ITEMS_PER_RUN);
+  return [...unique.values()].slice(0, MAX_ITEMS_PER_PAGE);
+}
+
+const PAGE_PARAMS = ["page", "cp", "p", "pageno", "pageindex", "curpage"];
+
+// Pagination links must keep the very query keys `absoluteArticleUrl` strips
+// as tracking noise, so page URLs get their own resolver.
+function absolutePageUrl(value: string, baseUrl: string) {
+  try {
+    const url = new URL(decodeXml(value).trim(), baseUrl);
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+export function pageNumber(value: string) {
+  try {
+    const url = new URL(value);
+    for (const [key, param] of url.searchParams) {
+      if (PAGE_PARAMS.includes(key.toLowerCase()) && /^\d{1,3}$/.test(param)) return Number(param);
+    }
+    const path = url.pathname.match(/\/(\d{1,3})\/?$/);
+    return path ? Number(path[1]) : 1;
+  } catch {
+    return 1;
+  }
+}
+
+/** Follows `rel="next"` when a site offers it, else the numbered pager link. */
+export function findNextPageUrl(html: string, currentUrl: string) {
+  const relNext = html.match(/<(?:link|a)\b[^>]*\brel=["']next["'][^>]*\bhref=["']([^"']+)["']/i)?.[1]
+    ?? html.match(/<(?:link|a)\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']next["']/i)?.[1];
+  if (relNext) {
+    const resolved = absolutePageUrl(relNext, currentUrl);
+    if (resolved && resolved !== currentUrl) return resolved;
+  }
+  const wanted = pageNumber(currentUrl) + 1;
+  for (const match of html.matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]{0,120}?)<\/a>/gi)) {
+    if (cleanText(match[2], 20) !== String(wanted)) continue;
+    const candidate = absolutePageUrl(match[1], currentUrl);
+    // The anchor text alone is weak evidence; require the URL to agree.
+    if (candidate && candidate !== currentUrl && pageNumber(candidate) === wanted) return candidate;
+  }
+  return "";
 }
 
 function isPrivateIpv4(hostname: string) {
@@ -253,7 +431,7 @@ async function safeFetch(input: string, headers: HeadersInit = {}) {
 
 type RobotsRule = { allow: boolean; pattern: string };
 
-function robotsAllows(text: string, target: URL) {
+export function robotsAllows(text: string, target: URL) {
   const exact: RobotsRule[] = [];
   const fallback: RobotsRule[] = [];
   let agents: string[] = [];
@@ -285,14 +463,20 @@ function robotsAllows(text: string, target: URL) {
   return matches[0]?.allow ?? true;
 }
 
-async function assertRobotsAllowed(input: string) {
+async function assertRobotsAllowed(input: string, cache?: Map<string, string>) {
   const target = new URL(validateSourceUrl(input));
+  const cached = cache?.get(target.origin);
+  if (cached !== undefined) {
+    if (!robotsAllows(cached, target)) throw new Error("이 URL은 사이트의 robots.txt에서 자동 수집을 허용하지 않습니다.");
+    return;
+  }
   const robotsUrl = `${target.origin}/robots.txt`;
   const { response } = await safeFetch(robotsUrl, { Accept: "text/plain" });
   if (response.status === 401 || response.status === 403) throw new Error("이 사이트의 robots.txt가 자동 수집을 허용하지 않습니다.");
   if (response.status >= 500) throw new Error("robots.txt를 확인할 수 없어 이번 수집을 보류했습니다.");
-  if (!response.ok) return;
+  if (!response.ok) { cache?.set(target.origin, ""); return; }
   const rules = await readLimited(response);
+  cache?.set(target.origin, rules);
   if (!robotsAllows(rules, target)) throw new Error("이 URL은 사이트의 robots.txt에서 자동 수집을 허용하지 않습니다.");
 }
 
@@ -300,12 +484,51 @@ function looksLikeFeed(text: string) {
   return /<(rss|feed|rdf:RDF)\b/i.test(text) && /<(item|entry)\b/i.test(text);
 }
 
+/**
+ * Walks a paginated listing newest-first, stopping as soon as a page carries no
+ * article from today. Later pages are best-effort: a failure keeps whatever the
+ * earlier pages already produced instead of failing the whole run.
+ */
+async function collectHtmlPages(firstHtml: string, firstUrl: string, source: SourceRow, now: number, robotsCache: Map<string, string>) {
+  const maxPages = source.max_pages;
+  const budget = Math.max(1, Math.min(MAX_PAGES_PER_RUN, Math.trunc(maxPages) || 1));
+  const seen = new Set([firstUrl]);
+  let html = firstHtml;
+  let url = firstUrl;
+  let pageItems = parseNewsPage(html, url, now);
+  const collected = [...pageItems];
+
+  for (let page = 1; page < budget; page += 1) {
+    if (!selectRecentItems(pageItems, now, source.window_hours).length) break;
+    const nextUrl = findNextPageUrl(html, url);
+    if (!nextUrl || seen.has(nextUrl)) break;
+    seen.add(nextUrl);
+    try {
+      await assertRobotsAllowed(nextUrl, robotsCache);
+      const next = await safeFetch(nextUrl);
+      if (!next.response.ok) break;
+      html = await readLimited(next.response);
+      url = next.finalUrl;
+      pageItems = parseNewsPage(html, url, now);
+      if (!pageItems.length) break;
+      collected.push(...pageItems);
+    } catch {
+      break;
+    }
+  }
+
+  const unique = new Map<string, FeedItem>();
+  for (const item of collected) if (!unique.has(item.url)) unique.set(item.url, item);
+  return [...unique.values()].slice(0, MAX_ITEMS_PER_RUN);
+}
+
 async function fetchSourceItems(source: SourceRow, now: number) {
   const conditionalHeaders: Record<string, string> = {};
   if (source.etag) conditionalHeaders["If-None-Match"] = source.etag;
   if (source.last_modified) conditionalHeaders["If-Modified-Since"] = source.last_modified;
+  const robotsCache = new Map<string, string>();
   const preferred = source.resolved_url || source.url;
-  await assertRobotsAllowed(preferred);
+  await assertRobotsAllowed(preferred, robotsCache);
   let fetched = await safeFetch(preferred, conditionalHeaders);
   if (fetched.response.status === 304) return { unchanged: true as const, url: fetched.finalUrl, response: fetched.response, items: [] as FeedItem[] };
   if (!fetched.response.ok) throw new Error(`뉴스 소스 응답 오류 (${fetched.response.status})`);
@@ -314,27 +537,29 @@ async function fetchSourceItems(source: SourceRow, now: number) {
 
   const pageUrl = fetched.finalUrl;
   const pageResponse = fetched.response;
-  const htmlItems = parseNewsPage(text, fetched.finalUrl, now);
+  const firstHtml = text;
+  const hasArticles = parseNewsPage(firstHtml, pageUrl, now).length > 0;
+  const htmlPages = async () => collectHtmlPages(firstHtml, pageUrl, source, now, robotsCache);
 
   const feedHref = text.match(/<link\b[^>]*\btype=["']application\/(?:rss|atom)\+xml["'][^>]*\bhref=["']([^"']+)["'][^>]*>/i)?.[1]
     ?? text.match(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\btype=["']application\/(?:rss|atom)\+xml["'][^>]*>/i)?.[1];
   if (!feedHref) {
-    if (!htmlItems.length) throw new Error("오늘 날짜를 식별할 수 있는 기사 목록을 찾지 못했습니다. RSS 또는 날짜가 표시된 뉴스 목록 URL을 등록해 주세요.");
-    return { unchanged: false as const, url: pageUrl, response: pageResponse, items: htmlItems };
+    if (!hasArticles) throw new Error("발행일을 식별할 수 있는 기사 목록을 찾지 못했습니다. RSS 또는 날짜가 표시된 뉴스 목록 URL을 등록해 주세요.");
+    return { unchanged: false as const, url: pageUrl, response: pageResponse, items: await htmlPages() };
   }
   const discoveredUrl = validateSourceUrl(new URL(decodeXml(feedHref), fetched.finalUrl).toString());
   try {
-    await assertRobotsAllowed(discoveredUrl);
+    await assertRobotsAllowed(discoveredUrl, robotsCache);
     fetched = await safeFetch(discoveredUrl);
     if (!fetched.response.ok) throw new Error(`발견한 피드 응답 오류 (${fetched.response.status})`);
     text = await readLimited(fetched.response);
     const feedItems = looksLikeFeed(text) ? parseFeed(text, fetched.finalUrl) : [];
     if (feedItems.length) return { unchanged: false as const, url: fetched.finalUrl, response: fetched.response, items: feedItems };
   } catch {
-    if (!htmlItems.length) throw new Error("페이지에서 발견한 RSS를 읽지 못했고 HTML 기사 날짜도 식별하지 못했습니다.");
+    if (!hasArticles) throw new Error("페이지에서 발견한 RSS를 읽지 못했고 HTML 기사 날짜도 식별하지 못했습니다.");
   }
-  if (!htmlItems.length) throw new Error("뉴스 기사와 발행일을 식별하지 못했습니다.");
-  return { unchanged: false as const, url: pageUrl, response: pageResponse, items: htmlItems };
+  if (!hasArticles) throw new Error("뉴스 기사와 발행일을 식별하지 못했습니다.");
+  return { unchanged: false as const, url: pageUrl, response: pageResponse, items: await htmlPages() };
 }
 
 async function hash(value: string) {
@@ -355,61 +580,67 @@ function errorMessage(reason: unknown) {
   return "알 수 없는 수집 오류가 발생했습니다.";
 }
 
-export async function crawlSource(db: D1Database, sourceId: number): Promise<CrawlResult> {
-  const source = await db.prepare("SELECT * FROM news_sources WHERE id = ? AND is_active = 1").bind(sourceId).first<SourceRow>();
+// 파서는 전부 정수 밀리초로 동작한다(테스트가 그 값을 그대로 비교한다). 컬럼은
+// timestamptz이므로 SQL 경계에서만 Date로 바꾼다. 새 바인딩에서 이걸 빠뜨리면
+// Postgres가 곧바로 타입 오류를 내므로 조용히 틀리지 않는다.
+const at = (ms: number | null | undefined) => (ms == null ? null : new Date(ms));
+
+export async function crawlSource(db: SqlDatabase, sourceId: number): Promise<CrawlResult> {
+  const source = await db.prepare("SELECT * FROM news_sources WHERE id = ? AND is_active = true").bind(sourceId).first<SourceRow>();
   if (!source) throw new Error("활성화된 뉴스 소스를 찾지 못했습니다.");
   const startedAt = Date.now();
-  const run = await db.prepare("INSERT INTO news_crawl_runs (source_id, status, started_at) VALUES (?, '실행 중', ?) RETURNING id").bind(source.id, startedAt).first<{ id: number }>();
+  const run = await db.prepare("INSERT INTO news_crawl_runs (source_id, status, started_at) VALUES (?, '실행 중', ?) RETURNING id").bind(source.id, at(startedAt)).first<{ id: number }>();
   if (!run) throw new Error("수집 실행 이력을 만들지 못했습니다.");
   try {
     const fetched = await fetchSourceItems(source, startedAt);
     const next = nextRunAt(source.crawl_hour_kst, startedAt);
     if (fetched.unchanged) {
       await db.batch([
-        db.prepare("UPDATE news_sources SET last_status = '변경 없음', last_error = NULL, last_crawled_at = ?, next_crawl_at = ?, updated_at = ? WHERE id = ?").bind(startedAt, next, startedAt, source.id),
-        db.prepare("UPDATE news_crawl_runs SET status = '변경 없음', completed_at = ? WHERE id = ?").bind(Date.now(), run.id),
+        db.prepare("UPDATE news_sources SET last_status = '변경 없음', last_error = NULL, last_crawled_at = ?, next_crawl_at = ?, updated_at = ? WHERE id = ?").bind(at(startedAt), at(next), at(startedAt), source.id),
+        db.prepare("UPDATE news_crawl_runs SET status = '변경 없음', completed_at = ? WHERE id = ?").bind(at(Date.now()), run.id),
       ]);
       return { sourceId, fetchedCount: 0, insertedCount: 0, status: "변경 없음" };
     }
-    const today = dateKst(startedAt);
-    const items = fetched.items.filter((item) => item.publishedAt !== null && dateKst(item.publishedAt) === today);
-    const completedStatus = items.length ? "완료" : "오늘 기사 없음";
+    const items = selectRecentItems(fetched.items, startedAt, source.window_hours);
+    const completedStatus = items.length ? "완료" : "새 기사 없음";
     let insertedCount = 0;
     for (const item of items) {
       const contentHash = await hash(`${item.title}\n${item.excerpt}`);
       const analysisText = `${item.title}. ${item.excerpt}`.slice(0, 6500);
       const analysis = analyzeNewsLocally(analysisText, "MARKET", "시장 전체");
-      const result = await db.prepare(`INSERT OR IGNORE INTO news_articles
-        (source_id, symbol, title, canonical_url, excerpt, published_at, published_date_kst, content_hash, sentiment, sentiment_score, materiality, relevance, event_type, score_adjustment, analysis_summary, collected_at)
-        VALUES (?, 'GENERAL', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(source.id, item.title, item.url, item.excerpt, item.publishedAt, today, contentHash, analysis.sentiment, Math.round(analysis.sentimentScore), analysis.materiality, 100, analysis.eventType, analysis.scoreAdjustment, analysis.summary, startedAt).run();
+      // published_date_kst는 DB 생성 열이므로 여기서 쓰지 않는다.
+      const result = await db.prepare(`INSERT INTO news_articles
+        (source_id, symbol, title, canonical_url, excerpt, published_at, content_hash, sentiment, sentiment_score, materiality, relevance, event_type, score_adjustment, analysis_summary, collected_at)
+        VALUES (?, 'GENERAL', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (canonical_url) DO NOTHING`)
+        .bind(source.id, item.title, item.url, item.excerpt, at(item.publishedAt), contentHash, analysis.sentiment, Math.round(analysis.sentimentScore), analysis.materiality, 100, analysis.eventType, analysis.scoreAdjustment, analysis.summary, at(startedAt)).run();
       insertedCount += result.meta.changes ?? 0;
     }
     await db.batch([
       db.prepare("UPDATE news_sources SET resolved_url = ?, etag = ?, last_modified = ?, last_status = ?, last_error = NULL, last_crawled_at = ?, next_crawl_at = ?, updated_at = ? WHERE id = ?")
-        .bind(fetched.url, fetched.response.headers.get("etag"), fetched.response.headers.get("last-modified"), completedStatus, startedAt, next, startedAt, source.id),
+        .bind(fetched.url, fetched.response.headers.get("etag"), fetched.response.headers.get("last-modified"), completedStatus, at(startedAt), at(next), at(startedAt), source.id),
       db.prepare("UPDATE news_crawl_runs SET status = ?, fetched_count = ?, inserted_count = ?, completed_at = ? WHERE id = ?")
-        .bind(completedStatus, items.length, insertedCount, Date.now(), run.id),
+        .bind(completedStatus, items.length, insertedCount, at(Date.now()), run.id),
     ]);
     return { sourceId, fetchedCount: items.length, insertedCount, status: completedStatus };
   } catch (reason) {
     const message = errorMessage(reason);
     await db.batch([
       db.prepare("UPDATE news_sources SET last_status = '오류', last_error = ?, last_crawled_at = ?, next_crawl_at = ?, updated_at = ? WHERE id = ?")
-        .bind(message, startedAt, nextRunAt(source.crawl_hour_kst, startedAt), startedAt, source.id),
-      db.prepare("UPDATE news_crawl_runs SET status = '오류', error = ?, completed_at = ? WHERE id = ?").bind(message, Date.now(), run.id),
+        .bind(message, at(startedAt), at(nextRunAt(source.crawl_hour_kst, startedAt)), at(startedAt), source.id),
+      db.prepare("UPDATE news_crawl_runs SET status = '오류', error = ?, completed_at = ? WHERE id = ?").bind(message, at(Date.now()), run.id),
     ]);
     throw new Error(message);
   }
 }
 
-export async function crawlDueSources(db: D1Database) {
-  const due = await db.prepare("SELECT id FROM news_sources WHERE is_active = 1 AND next_crawl_at <= ? ORDER BY next_crawl_at LIMIT 20").bind(Date.now()).all<{ id: number }>();
+export async function crawlDueSources(db: SqlDatabase) {
+  const due = await db.prepare("SELECT id FROM news_sources WHERE is_active = true AND next_crawl_at <= ? ORDER BY next_crawl_at LIMIT 20").bind(at(Date.now())).all<{ id: number }>();
   const results: Array<CrawlResult | { sourceId: number; error: string }> = [];
   for (const source of due.results) {
     try { results.push(await crawlSource(db, source.id)); }
     catch (reason) { results.push({ sourceId: source.id, error: errorMessage(reason) }); }
   }
-  await db.prepare("PRAGMA optimize").run();
+  // SQLite 시절의 `PRAGMA optimize`는 Postgres에서 autovacuum이 대신한다.
   return results;
 }

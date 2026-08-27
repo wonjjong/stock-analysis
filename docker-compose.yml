@@ -1,0 +1,28 @@
+# 로컬 개발용 PostgreSQL. Cloudflare D1이 관리형이었던 자리를 대신한다.
+#   docker compose up -d
+#   npm run db:migrate && npm run dev
+#   npm run scheduler            # 별 터미널 — Worker cron 대체
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: signalist-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: signalist
+      # 컨테이너는 UTC로 둔다. 한국시간 날짜는 published_date_kst 생성 열이
+      # 'Asia/Seoul'로 계산하므로 서버 타임존에 의존하지 않는다.
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "55432:5432"
+    volumes:
+      - signalist-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d signalist"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  signalist-pgdata:
