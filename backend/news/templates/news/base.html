@@ -1,0 +1,41 @@
+{% load static %}<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Signalist{% endblock %} · Signalist</title>
+<link rel="stylesheet" href="{% static 'news/app.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="{% url 'dashboard' %}">Signalist</a>
+  <nav>
+    <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="on"{% endif %}>대시보드</a>
+    <a href="{% url 'sources' %}" {% if request.resolver_match.url_name == 'sources' %}class="on"{% endif %}>수집 소스</a>
+    <a href="{% url 'archive' %}" {% if request.resolver_match.url_name == 'archive' %}class="on"{% endif %}>기사 아카이브</a>
+    <a href="{% url 'providers' %}" {% if request.resolver_match.url_name == 'providers' %}class="on"{% endif %}>AI 공급자</a>
+    <a href="{% url 'lab' %}" {% if request.resolver_match.url_name == 'lab' %}class="on"{% endif %}>분석실</a>
+    <a href="/admin/" class="muted">운영</a>
+  </nav>
+</header>
+
+{% if messages %}
+<ul class="flash">
+  {% for message in messages %}<li class="flash-{{ message.tags }}">{{ message }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<main>
+  <div class="page-head">
+    <p class="eyebrow">{% block eyebrow %}{% endblock %}</p>
+    <h1>{% block heading %}{% endblock %}</h1>
+    {% block lede %}{% endblock %}
+  </div>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <span>투자 참고용 리서치 도구입니다. 투자자문이나 수익 보장을 제공하지 않습니다.</span>
+</footer>
+</body>
+</html>

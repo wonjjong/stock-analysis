@@ -1,0 +1,99 @@
+{% extends "news/base.html" %}
+{% block title %}AI 공급자{% endblock %}
+{% block eyebrow %}FREE TIER FAILOVER{% endblock %}
+{% block heading %}무료 AI를 여러 개 걸어두고<br>막히면 다음으로 넘깁니다{% endblock %}
+{% block lede %}<p class="lede">우선순위가 <strong>낮은 숫자부터</strong> 호출합니다. 한도 초과·인증 오류·일시 오류가 나면 그 공급자를 종류별로 쉬게 하고 다음으로 넘어갑니다. 전부 막히면 규칙 기반 엔진으로 분석을 이어갑니다.</p>{% endblock %}
+
+{% block content %}
+<div class="grid four" style="margin-bottom:16px">
+  <div class="stat"><small>등록</small><strong class="num">{{ stats.total }}</strong></div>
+  <div class="stat accent"><small>지금 사용 가능</small><strong class="num">{{ stats.usable }}</strong></div>
+  <div class="stat"><small>쿨다운 중</small><strong class="num">{{ stats.cooling }}</strong></div>
+  <div class="stat"><small>환경변수 폴백</small><strong>{% if stats.envFallback %}있음{% else %}없음{% endif %}</strong></div>
+</div>
+
+<section class="panel">
+  <h2>공급자 등록</h2>
+  <details style="margin-bottom:14px">
+    <summary class="dim" style="font-size:10px">프리셋 보기 — 무료 티어로 시작할 수 있는 공급자</summary>
+    <div class="scroll" style="margin-top:10px"><table>
+      <tr><th>이름</th><th>Base URL / 모델</th><th class="num">우선순위 / 한도</th><th>키 발급</th></tr>
+      {% for p in presets %}
+      <tr>
+        <td><strong>{{ p.name }}</strong></td>
+        <td class="dim" style="font-size:9px">{{ p.base_url }}<br>{{ p.model }}</td>
+        <td class="num dim">{{ p.priority }} / {{ p.daily_limit }}</td>
+        <td><a href="{{ p.key_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--mint);font-size:10px">발급 →</a></td>
+      </tr>
+      <tr><td colspan="4" class="help" style="padding-top:0">{{ p.note }}</td></tr>
+      {% endfor %}
+    </table></div>
+    <p class="help">모델명과 무료 한도는 제공사가 자주 바꿉니다. 등록 후 <strong>연결 확인</strong>으로 실제 호출이 도는지 보세요.</p>
+  </details>
+
+  <form method="post" action="{% url 'provider_create' %}">
+    {% csrf_token %}
+    <div class="form-row">
+      <label>{{ form.name.label }}{{ form.name }}</label>
+      <label>{{ form.model.label }}{{ form.model }}</label>
+      <label>{{ form.priority.label }}{{ form.priority }}</label>
+      <label>{{ form.daily_limit.label }}{{ form.daily_limit }}</label>
+    </div>
+    <label>{{ form.base_url.label }}{{ form.base_url }}<p class="help">{{ form.base_url.help_text }}</p></label>
+    <label>{{ form.api_key.label }}{{ form.api_key }}<p class="help">{{ form.api_key.help_text }}</p></label>
+    <div class="actions" style="margin-top:6px"><button class="primary" type="submit">등록</button></div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>호출 순서</h2>
+  {% if providers %}
+  <div class="scroll"><table>
+    <tr><th class="num">순서</th><th>이름 / 모델</th><th>상태</th><th class="num">오늘 사용</th><th class="num">성공 / 실패</th><th>키</th><th></th></tr>
+    {% for p in providers %}
+    <tr>
+      <td class="num">{{ p.priority }}</td>
+      <td>
+        <strong>{{ p.name }}</strong>
+        <div class="dim" style="font-size:9px">{{ p.model }}</div>
+        <div class="dim" style="font-size:9px">{{ p.base_url|truncatechars:44 }}</div>
+      </td>
+      <td>
+        {% if not p.is_active %}<span class="chip mute">중지</span>
+        {% elif p.cooldown_until and p.cooldown_until > now %}<span class="chip warn">쿨다운</span>
+        {% elif p.last_status == "정상" %}<span class="chip ok">정상</span>
+        {% else %}<span class="chip mute">{{ p.last_status }}</span>{% endif %}
+        {% if p.cooldown_until and p.cooldown_until > now %}<div class="dim" style="font-size:9px">{{ p.cooldown_until|date:"m-d H:i" }} 까지</div>{% endif %}
+        {% if p.last_error %}<div class="neg" style="font-size:9px">{{ p.last_error|truncatechars:56 }}</div>{% endif %}
+      </td>
+      <td class="num">{{ p.used_today }}{% if p.daily_limit %} / {{ p.daily_limit }}{% else %} <span class="dim">무제한</span>{% endif %}</td>
+      <td class="num"><span class="pos">{{ p.success_count }}</span> / <span class="neg">{{ p.failure_count }}</span></td>
+      <td class="dim num" style="font-size:9px">{{ p.masked_key }}</td>
+      <td>
+        <div class="actions">
+          <form method="post" action="{% url 'provider_action' p.pk 'test' %}">{% csrf_token %}<button type="submit">연결 확인</button></form>
+          <form method="post" action="{% url 'provider_action' p.pk 'toggle' %}">{% csrf_token %}<button type="submit">{% if p.is_active %}중지{% else %}재개{% endif %}</button></form>
+          {% if p.cooldown_until %}<form method="post" action="{% url 'provider_action' p.pk 'clear-cooldown' %}">{% csrf_token %}<button type="submit">쿨다운 해제</button></form>{% endif %}
+          <form method="post" action="{% url 'provider_action' p.pk 'delete' %}" onsubmit="return confirm('{{ p.name }} 을 삭제할까요?')">{% csrf_token %}<button class="danger" type="submit">삭제</button></form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}
+  <p class="empty">등록된 AI 공급자가 없습니다. 위 프리셋을 참고해 하나 등록해 보세요. 없어도 규칙 기반 분석은 계속 돕니다.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>실패 종류와 쉬는 시간</h2>
+  <div class="scroll"><table>
+    <tr><th>실패 종류</th><th>판정 기준</th><th>쉬는 시간</th></tr>
+    <tr><td>한도 초과</td><td class="dim">429, 402, 또는 400 + quota·limit 문구</td><td>1시간 (한국시간 자정을 넘기지 않음)</td></tr>
+    <tr><td>인증 오류</td><td class="dim">401, 403</td><td>6시간</td></tr>
+    <tr><td>요청 오류</td><td class="dim">그 외 4xx</td><td>30분</td></tr>
+    <tr><td>일시 오류</td><td class="dim">5xx, 타임아웃, 네트워크 오류</td><td>5분</td></tr>
+  </table></div>
+  <p class="help">한도 초과가 분당 제한인지 일일 제한인지는 응답만 보고 알 수 없어 1시간을 기본으로 잡되, 자정이 더 가까우면 자정까지만 쉽니다. 무료 티어 사용량이 그때 초기화되기 때문입니다.</p>
+</section>
+{% endblock %}

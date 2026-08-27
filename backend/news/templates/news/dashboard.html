@@ -1,0 +1,101 @@
+{% extends "news/base.html" %}
+{% block title %}대시보드{% endblock %}
+{% block eyebrow %}PIPELINE STATUS{% endblock %}
+{% block heading %}뉴스 파이프라인이<br>지금 무엇을 하고 있나{% endblock %}
+{% block lede %}<p class="lede">수집 소스, 본문 분석 큐, AI 공급자 상태를 한 화면에서 봅니다. 리서치 엔진(팩터·백테스트)이 생기면 이 자리가 추천 목록이 됩니다.</p>{% endblock %}
+
+{% block content %}
+<div class="grid four" style="margin-bottom:16px">
+  <div class="stat accent"><small>수집 기사 누적</small><strong class="num">{{ total_count }}</strong></div>
+  <div class="stat"><small>최근 48시간</small><strong class="num">{{ recent_count }}</strong></div>
+  <div class="stat"><small>분석 대기</small><strong class="num">{{ queue.pending }}</strong></div>
+  <div class="stat"><small>분석 완료</small><strong class="num">{{ queue.done }}</strong></div>
+</div>
+
+<div class="grid two">
+  <section class="panel">
+    <h2>수집 소스 {{ sources|length }}개</h2>
+    {% if sources %}
+    <div class="scroll"><table>
+      <tr><th>이름</th><th>상태</th><th class="num">기사</th><th>다음 실행</th></tr>
+      {% for s in sources %}
+      <tr>
+        <td>{{ s.name }}<div class="dim">{{ s.category }}</div></td>
+        <td>
+          {% if s.is_active %}<span class="chip ok">활성</span>{% else %}<span class="chip mute">중지</span>{% endif %}
+          <div class="dim">{{ s.last_status }}</div>
+        </td>
+        <td class="num">{{ s.article_count }}</td>
+        <td class="num dim">{{ s.next_crawl_at|date:"m-d H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<p class="empty">등록된 소스가 없습니다. <a href="{% url 'sources' %}" style="color:var(--mint)">소스 등록</a></p>{% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>AI 공급자</h2>
+    <div class="grid four" style="margin-bottom:12px">
+      <div class="stat"><small>등록</small><strong class="num">{{ stats.total }}</strong></div>
+      <div class="stat"><small>지금 사용 가능</small><strong class="num">{{ stats.usable }}</strong></div>
+      <div class="stat"><small>쿨다운 중</small><strong class="num">{{ stats.cooling }}</strong></div>
+    </div>
+    {% if stats.usable %}
+      <p class="help">본문 분석에 AI 를 씁니다. 전부 막히면 규칙 기반으로 계속 돕니다.</p>
+    {% else %}
+      <p class="help">쓸 수 있는 공급자가 없어 <strong>규칙 기반</strong>으로만 분석합니다.
+        <a href="{% url 'providers' %}" style="color:var(--mint)">공급자 등록</a></p>
+    {% endif %}
+    <h2 style="margin-top:18px">엔진별 분석 건수</h2>
+    <div class="tag-row">
+      {% for engine, count in queue.engines.items %}<span class="chip mute">{{ engine }} {{ count }}</span>{% empty %}<span class="dim">아직 없습니다.</span>{% endfor %}
+    </div>
+  </section>
+</div>
+
+<div class="grid two">
+  <section class="panel">
+    <h2>최근 수집 실행</h2>
+    {% if runs %}
+    <div class="scroll"><table>
+      <tr><th>시각</th><th>소스</th><th>상태</th><th class="num">확인/신규</th></tr>
+      {% for r in runs %}
+      <tr>
+        <td class="num dim">{{ r.started_at|date:"m-d H:i" }}</td>
+        <td>{{ r.source.name }}</td>
+        <td>
+          {% if r.status == "완료" %}<span class="chip ok">{{ r.status }}</span>
+          {% elif r.status == "오류" %}<span class="chip bad">{{ r.status }}</span>
+          {% else %}<span class="chip mute">{{ r.status }}</span>{% endif %}
+          {% if r.error %}<div class="neg" style="font-size:9px">{{ r.error|truncatechars:60 }}</div>{% endif %}
+        </td>
+        <td class="num">{{ r.fetched_count }} / <span class="pos">{{ r.inserted_count }}</span></td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<p class="empty">실행 이력이 없습니다.</p>{% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>최근 48시간 많이 언급된 종목</h2>
+    {% if top_symbols %}
+    <div class="tag-row">
+      {% for s in top_symbols %}
+        {% if s.symbols__company %}
+        <a class="chip mute" href="{% url 'archive' %}?symbol={{ s.symbols__symbol }}">{{ s.symbols__company }} {{ s.n }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">아직 종목이 잡히지 않았습니다. 본문 분석을 실행하면 채워집니다.</p>{% endif %}
+
+    {% if queue.pending %}
+    <form method="post" action="{% url 'run_insights' %}" style="margin-top:16px">
+      {% csrf_token %}
+      <input type="hidden" name="limit" value="20">
+      <input type="hidden" name="next" value="{% url 'dashboard' %}">
+      <button class="primary" type="submit">대기 {{ queue.pending }}건 중 20건 분석</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

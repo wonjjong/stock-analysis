@@ -1,0 +1,71 @@
+{% extends "news/base.html" %}
+{% block title %}분석실{% endblock %}
+{% block eyebrow %}NEWS ANALYSIS LAB{% endblock %}
+{% block heading %}기사를 붙여넣어<br>무엇이 뽑히는지 봅니다{% endblock %}
+{% block lede %}<p class="lede">저장하지 않습니다. 규칙 엔진과 AI 가 같은 기사에서 무엇을 뽑는지 확인하는 용도입니다.
+{% if not llm_configured %}<br>지금은 쓸 수 있는 AI 공급자가 없어 <strong>규칙 기반</strong>으로만 분석합니다.{% endif %}</p>{% endblock %}
+
+{% block content %}
+<div class="grid two">
+  <section class="panel">
+    <h2>기사 입력</h2>
+    <form method="post">
+      {% csrf_token %}
+      <label>{{ form.title.label }}{{ form.title }}</label>
+      <label>{{ form.body.label }}{{ form.body }}</label>
+      <label style="display:flex;align-items:center;gap:8px">
+        {{ form.use_llm }} <span>{{ form.use_llm.label }}</span>
+      </label>
+      <p class="help">{{ form.use_llm.help_text }}</p>
+      <div class="actions"><button class="primary" type="submit">뉴스 분석하기</button></div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>분석 결과</h2>
+    {% if result %}
+      <div class="grid four" style="margin-bottom:14px">
+        <div class="stat"><small>감성</small><strong class="{% if result.sentiment == '긍정' %}pos{% elif result.sentiment == '부정' %}neg{% endif %}">{{ result.sentiment }} <span class="num">{{ result.sentiment_score }}</span></strong></div>
+        <div class="stat"><small>중요도</small><strong>{{ result.materiality }}</strong></div>
+        <div class="stat accent"><small>추천점수 조정</small><strong class="num">{{ result.score_adjustment }}</strong></div>
+        <div class="stat"><small>영향 기간</small><strong style="font-size:13px">{{ result.impact_horizon }}</strong></div>
+      </div>
+
+      <p class="help" style="font-size:11px;color:var(--text)">{{ result.summary }}</p>
+      <p class="help"><b style="color:var(--mint)">사건 유형</b> {{ result.event_type }} · <b style="color:var(--mint)">엔진</b> {{ result.engine }}{% if result.model %} ({{ result.model }}){% endif %}</p>
+
+      {% if result.keywords %}
+      <h2 style="margin-top:16px">핵심 키워드</h2>
+      <div class="tag-row">{% for k in result.keywords %}<span class="chip mute">{{ k }}</span>{% endfor %}</div>
+      {% endif %}
+
+      {% if symbols %}
+      <h2 style="margin-top:16px">언급된 종목</h2>
+      <div class="scroll"><table>
+        <tr><th>종목</th><th>업종</th><th class="num">언급</th><th class="num">관련도</th></tr>
+        {% for s in symbols %}
+        <tr><td>{{ s.company }} <span class="dim num">{{ s.symbol }}</span></td><td class="dim">{{ s.sector }}</td><td class="num">{{ s.mentions }}</td><td class="num">{{ s.relevance }}</td></tr>
+        {% endfor %}
+      </table></div>
+      {% endif %}
+
+      {% if result.sectors %}
+      <h2 style="margin-top:16px">영향 업종</h2>
+      <div class="tag-row">{% for s in result.sectors %}<span class="chip mute">{{ s }}</span>{% endfor %}</div>
+      {% endif %}
+
+      {% if result.evidence %}
+      <h2 style="margin-top:16px">기사에서 확인한 핵심 근거</h2>
+      <ul class="help" style="padding-left:16px;font-size:11px">{% for e in result.evidence %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if result.market_view %}
+      <h2 style="margin-top:16px">시장 관점</h2>
+      <p class="help" style="font-size:11px">{{ result.market_view }}</p>
+      {% endif %}
+    {% else %}
+      <p class="empty">왼쪽에 기사 제목과 본문을 넣고 분석해 보세요.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "news/base.html" %}
+{% block title %}기사 아카이브{% endblock %}
+{% block eyebrow %}COLLECTED ARTICLE ARCHIVE{% endblock %}
+{% block heading %}수집한 모든 기사를<br>기간·소스·종목으로 찾습니다{% endblock %}
+
+{% block content %}
+<div class="grid four" style="margin-bottom:16px">
+  <div class="stat accent"><small>검색 결과</small><strong class="num">{{ summary.total }}</strong></div>
+  <div class="stat"><small>긍정</small><strong class="num pos">{{ summary.positive }}</strong></div>
+  <div class="stat"><small>부정</small><strong class="num neg">{{ summary.negative }}</strong></div>
+  <div class="stat"><small>분석 대기</small><strong class="num">{{ summary.pending }}</strong></div>
+</div>
+
+<section class="panel">
+  <form method="get">
+    <div class="form-row">
+      <label>{{ form.q.label }}{{ form.q }}</label>
+      <label>{{ form.date_from.label }}{{ form.date_from }}</label>
+      <label>{{ form.date_to.label }}{{ form.date_to }}</label>
+      <label>소스
+        <select name="source">
+          <option value="">전체 소스</option>
+          {% for s in sources %}
+          <option value="{{ s.pk }}" {% if form.data.source == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }} ({{ s.article_count }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>{{ form.sentiment.label }}{{ form.sentiment }}</label>
+      <label>종목
+        <select name="symbol">
+          <option value="">전체 종목</option>
+          {% for s in top_symbols %}
+          <option value="{{ s.symbols__symbol }}" {% if form.data.symbol == s.symbols__symbol %}selected{% endif %}>{{ s.symbols__company }} ({{ s.n }})</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="actions" style="margin-top:6px">
+      <button class="primary" type="submit">검색</button>
+      {% if has_filters %}<a class="btn" href="{% url 'archive' %}">필터 초기화</a>{% endif %}
+      <form method="post" action="{% url 'run_insights' %}" style="display:inline">
+        {% csrf_token %}<input type="hidden" name="limit" value="12">
+        <input type="hidden" name="next" value="{% url 'archive' %}">
+        <button type="submit">본문 분석 실행</button>
+      </form>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>{{ summary.total }}건 중 {{ page.object_list|length }}건 표시</h2>
+  {% if page.object_list %}
+  <div class="scroll"><table>
+    <tr><th>날짜</th><th>제목</th><th>소스</th><th>감성</th><th>종목</th></tr>
+    {% for a in page.object_list %}
+    <tr>
+      <td class="num dim">{{ a.published_date_kst|date:"Y-m-d" }}<div style="font-size:9px">{{ a.published_at|date:"H:i" }}</div></td>
+      <td>
+        <details>
+          <summary>{{ a.title|truncatechars:70 }}</summary>
+          <div style="padding:10px 0 4px">
+            {% if a.insight %}
+              <p class="help" style="font-size:11px;color:var(--text)">{{ a.insight.summary|truncatechars:400 }}</p>
+              {% if a.insight.keywords %}
+              <div class="tag-row">{% for k in a.insight.keywords %}<span class="chip mute">{{ k }}</span>{% endfor %}</div>
+              {% endif %}
+              {% if a.insight.sectors %}<p class="help"><b style="color:var(--mint)">영향 업종</b> {{ a.insight.sectors|join:", " }}</p>{% endif %}
+              {% if a.insight.market_view %}<p class="help"><b style="color:var(--mint)">시장 관점</b> {{ a.insight.market_view }}</p>{% endif %}
+              {% if a.insight.evidence %}
+              <ul class="help" style="padding-left:16px">{% for e in a.insight.evidence %}<li>{{ e }}</li>{% endfor %}</ul>
+              {% endif %}
+              <p class="help">{{ a.insight.engine }} · 본문 {{ a.insight.body_chars }}자 · {{ a.insight.impact_horizon }}</p>
+            {% else %}
+              <p class="help">{{ a.excerpt|truncatechars:300 }}</p>
+              <p class="help">본문 분석 대기 중입니다.</p>
+            {% endif %}
+            <a href="{{ a.canonical_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--mint);font-size:10px">원문 보기 →</a>
+          </div>
+        </details>
+      </td>
+      <td class="dim">{{ a.source.name }}</td>
+      <td>
+        {% if a.sentiment == "긍정" %}<span class="pos">{{ a.sentiment }}</span>
+        {% elif a.sentiment == "부정" %}<span class="neg">{{ a.sentiment }}</span>
+        {% else %}<span class="dim">{{ a.sentiment }}</span>{% endif %}
+        <div class="num dim">{{ a.sentiment_score }} · {{ a.materiality }}</div>
+      </td>
+      <td>
+        {% for s in a.symbols.all|slice:":3" %}<div style="font-size:10px">{{ s.company }} <span class="dim num">{{ s.relevance }}</span></div>{% empty %}<span class="dim">—</span>{% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+
+  <div class="pager">
+    {% if page.has_previous %}<a class="btn" href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page.previous_page_number }}">이전</a>{% endif %}
+    <span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn" href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page.next_page_number }}">다음</a>{% endif %}
+  </div>
+  {% else %}
+  <p class="empty">조건에 맞는 기사가 없습니다.</p>
+  {% endif %}
+</section>
+{% endblock %}
