@@ -8,10 +8,20 @@ const links = [
   { href: "/portfolio", label: "내 포트폴리오", icon: "◫" },
   { href: "/stock/005930", label: "종목 리서치", icon: "⌕" },
   { href: "/news", label: "뉴스 분석실", icon: "N" },
+  { href: "/news/archive", label: "기사 아카이브", icon: "▤" },
+  { href: "/news/providers", label: "AI 공급자", icon: "◈" },
 ];
+
+function activeHref(pathname: string) {
+  // 더 깊은 경로가 있으면 그쪽만 활성화한다. (/news 와 /news/archive)
+  return links
+    .filter((link) => (link.href === "/" ? pathname === "/" : pathname === link.href || pathname.startsWith(`${link.href}/`)))
+    .sort((left, right) => right.href.length - left.href.length)[0]?.href;
+}
 
 export function Navigation() {
   const pathname = usePathname();
+  const current = activeHref(pathname);
 
   return (
     <aside className="sidebar">
@@ -22,7 +32,7 @@ export function Navigation() {
       <nav className="side-nav" aria-label="주 메뉴">
         <span className="nav-eyebrow">WORKSPACE</span>
         {links.map((link) => {
-          const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+          const active = link.href === current;
           return (
             <Link key={link.href} href={link.href} className={active ? "nav-link active" : "nav-link"}>
               <span className="nav-icon">{link.icon}</span>

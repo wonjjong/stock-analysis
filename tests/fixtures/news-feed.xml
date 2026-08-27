@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>테스트 통신사 : 최신기사</title>
+    <link>https://news.example.com/</link>
+    <item>
+      <title><![CDATA[여당 연찬회에서 나온 단일 대오 요구와 지도부 책임론]]></title>
+      <link>https://news.example.com/view/AKR20260827173200001?utm_source=rss&amp;section=politics</link>
+      <description><![CDATA[전당대회를 앞두고 계파 갈등이 다시 불거졌다.]]></description>
+      <pubDate>Thu, 27 Aug 2026 18:18:07 +0900</pubDate>
+    </item>
+    <item>
+      <title>중부 지방 호우주의보 해제, 남부는 폭염경보 유지</title>
+      <link>https://news.example.com/view/AKR20260827179500051</link>
+      <description>기상청은 오후 6시를 기해 호우주의보를 해제했다.</description>
+      <pubDate>Thu, 27 Aug 2026 17:05:00 +0900</pubDate>
+    </item>
+  </channel>
+</rss>
