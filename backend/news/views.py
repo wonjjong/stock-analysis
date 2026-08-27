@@ -50,10 +50,12 @@ def healthz(request: HttpRequest) -> JsonResponse:
     try:
         with connection.cursor() as cursor:
             for name in ("news_sources", "news_articles", "news_insights", "news_article_symbols"):
-                cursor.execute(f"SELECT count(*) FROM {name}")  # noqa: S608 - 고정 목록
+                # 테이블명은 위 고정 목록에서만 오므로 f-string 이 안전하다.
+                cursor.execute(f"SELECT count(*) FROM {name}")
                 tables[name] = cursor.fetchone()[0]
         status = "ok"
-    except Exception as reason:  # noqa: BLE001 - 헬스체크는 원인을 그대로 노출한다
+    except Exception as reason:
+        # 헬스체크는 무엇이 실패했는지 그대로 노출하는 것이 목적이다.
         status = "error"
         tables = {"error": str(reason)}
     return JsonResponse({"status": status, "tables": tables})
@@ -363,7 +365,8 @@ def _test_provider(request: HttpRequest, provider: LlmProvider) -> None:
     except LlmError as reason:
         messages.error(request, f"{provider.name}: {reason.kind} — {reason}")
         return
-    except Exception as reason:  # noqa: BLE001
+    except Exception as reason:
+        # 연결 확인은 어떤 실패든 화면에 그대로 보여 준다.
         messages.error(request, f"{provider.name}: 호출 실패 — {reason}")
         return
     messages.success(request, f"{provider.name}: 정상 응답을 받았습니다.")
