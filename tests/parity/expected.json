@@ -1,0 +1,1673 @@
+{
+ "meta": {
+  "now": 1787823000000,
+  "nowIso": "2026-08-27T09:30:00.000Z",
+  "live": false,
+  "node": "v25.4.0"
+ },
+ "dates": [
+  {
+   "input": "2026-08-27T18:18:07+09:00",
+   "parseVisibleDate": 1787822287000
+  },
+  {
+   "input": "2026-08-27T09:18:07Z",
+   "parseVisibleDate": 1787822287000
+  },
+  {
+   "input": "2026-08-27 18:18:07 KST",
+   "parseVisibleDate": 1787822287000
+  },
+  {
+   "input": "Wed, 27 Aug 2026 18:18:07 +0900",
+   "parseVisibleDate": 1787822287000
+  },
+  {
+   "input": "Wed, 27 Aug 2026 09:18:07 GMT",
+   "parseVisibleDate": 1787822287000
+  },
+  {
+   "input": "2026-08-27T18:18",
+   "parseVisibleDate": 1787822280000
+  },
+  {
+   "input": "2026-08-27 18:18:07",
+   "parseVisibleDate": 1787822287000
+  },
+  {
+   "input": "2026.08.27 18:18",
+   "parseVisibleDate": 1787822280000
+  },
+  {
+   "input": "2026/08/27",
+   "parseVisibleDate": 1787756400000
+  },
+  {
+   "input": "08-27 18:18",
+   "parseVisibleDate": 1787822280000
+  },
+  {
+   "input": "08.27 18:18",
+   "parseVisibleDate": 1787822280000
+  },
+  {
+   "input": "12-29 21:00",
+   "parseVisibleDate": 1767009600000
+  },
+  {
+   "input": "8-3 9:05",
+   "parseVisibleDate": 1785715500000
+  },
+  {
+   "input": "12분 전",
+   "parseVisibleDate": 1787822280000
+  },
+  {
+   "input": "3시간 전",
+   "parseVisibleDate": 1787812200000
+  },
+  {
+   "input": "45 minutes ago",
+   "parseVisibleDate": 1787820300000
+  },
+  {
+   "input": "2 hours ago",
+   "parseVisibleDate": 1787815800000
+  },
+  {
+   "input": "오늘 07:30",
+   "parseVisibleDate": 1787783400000
+  },
+  {
+   "input": "오늘",
+   "parseVisibleDate": 1787823000000
+  },
+  {
+   "input": "today 07:30",
+   "parseVisibleDate": 1787783400000
+  },
+  {
+   "input": "8월 27일",
+   "parseVisibleDate": 1787756400000
+  },
+  {
+   "input": "8월 27일 18시",
+   "parseVisibleDate": 1787821200000
+  },
+  {
+   "input": "8월 27일 18시 30분",
+   "parseVisibleDate": 1787823000000
+  },
+  {
+   "input": "경기 결과 3-2 완승",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "기사 번호 AKR20260827173200001",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "/image/2026/08/27/thumb.jpg",
+   "parseVisibleDate": 1787756400000
+  },
+  {
+   "input": "조회수 1,234",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "1-0",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "부산 2-1 승리",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "12",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "12-3",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "2026",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "   ",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "댓글 5",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "2026-13-45 99:99",
+   "parseVisibleDate": null
+  },
+  {
+   "input": "2026-02-30 10:00",
+   "parseVisibleDate": 1772413200000
+  },
+  {
+   "input": "0000-00-00 00:00",
+   "parseVisibleDate": null
+  }
+ ],
+ "dateKst": [
+  {
+   "input": 1787823000000,
+   "dateKst": "2026-08-27"
+  },
+  {
+   "input": 1787787000000,
+   "dateKst": "2026-08-27"
+  },
+  {
+   "input": 1787859000000,
+   "dateKst": "2026-08-28"
+  },
+  {
+   "input": 1798731000000,
+   "dateKst": "2027-01-01"
+  },
+  {
+   "input": 0,
+   "dateKst": "1970-01-01"
+  }
+ ],
+ "sourceUrls": [
+  {
+   "input": "https://news.example.com/latest",
+   "validateSourceUrl": "https://news.example.com/latest"
+  },
+  {
+   "input": "http://news.example.com/latest",
+   "validateSourceUrl": "http://news.example.com/latest"
+  },
+  {
+   "input": "https://127.0.0.1/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "http://localhost/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://10.0.0.1/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://192.168.1.1/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://172.16.0.1/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://169.254.169.254/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://0.0.0.0/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://[::1]/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://[fd00::1]/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "ftp://news.example.com/x",
+   "validateSourceUrl": {
+    "__error": "HTTP 또는 HTTPS URL만 등록할 수 있습니다."
+   }
+  },
+  {
+   "input": "file:///etc/passwd",
+   "validateSourceUrl": {
+    "__error": "HTTP 또는 HTTPS URL만 등록할 수 있습니다."
+   }
+  },
+  {
+   "input": "not-a-url",
+   "validateSourceUrl": {
+    "__error": "올바른 뉴스 URL을 입력해 주세요."
+   }
+  },
+  {
+   "input": "https://news.example.com:8080/x",
+   "validateSourceUrl": "https://news.example.com:8080/x"
+  },
+  {
+   "input": "https://user:pass@news.example.com/x",
+   "validateSourceUrl": {
+    "__error": "내부 네트워크 주소는 등록할 수 없습니다."
+   }
+  },
+  {
+   "input": "https://1.1.1.1/x",
+   "validateSourceUrl": "https://1.1.1.1/x"
+  },
+  {
+   "input": "https://8.8.8.8/x",
+   "validateSourceUrl": "https://8.8.8.8/x"
+  }
+ ],
+ "urlsViaAnchors": [
+  {
+   "href": "/view/AKR20260827173200001",
+   "items": [
+    "https://news.example.com/view/AKR20260827173200001"
+   ]
+  },
+  {
+   "href": "view/AKR20260827173200001",
+   "items": [
+    "https://news.example.com/view/AKR20260827173200001"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?utm_source=x&utm_medium=y",
+   "items": [
+    "https://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?section=economy&cp=nv",
+   "items": [
+    "https://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?ref=main&from=list&sid=001",
+   "items": [
+    "https://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?keep=yes&utm_campaign=z",
+   "items": [
+    "https://news.example.com/view/1?keep=yes"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1#comment",
+   "items": [
+    "https://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?",
+   "items": [
+    "https://news.example.com/view/1?"
+   ]
+  },
+  {
+   "href": "https://news.example.com:443/view/1",
+   "items": [
+    "https://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "http://news.example.com:80/view/1",
+   "items": [
+    "http://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "https://news.example.com/a/../b",
+   "items": [
+    "https://news.example.com/b"
+   ]
+  },
+  {
+   "href": "https://news.example.com/a/./b",
+   "items": [
+    "https://news.example.com/a/b"
+   ]
+  },
+  {
+   "href": "https://news.example.com/%EA%B2%BD%EC%A0%9C/1",
+   "items": [
+    "https://news.example.com/%EA%B2%BD%EC%A0%9C/1"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?q=a+b",
+   "items": [
+    "https://news.example.com/view/1?q=a+b"
+   ]
+  },
+  {
+   "href": "https://news.example.com/view/1?q=a%20b",
+   "items": [
+    "https://news.example.com/view/1?q=a%20b"
+   ]
+  },
+  {
+   "href": "//news.example.com/view/1",
+   "items": [
+    "https://news.example.com/view/1"
+   ]
+  },
+  {
+   "href": "?page=2",
+   "items": [
+    "https://news.example.com/news?page=2"
+   ]
+  },
+  {
+   "href": "#top",
+   "items": [
+    "https://news.example.com/news"
+   ]
+  },
+  {
+   "href": "",
+   "items": []
+  },
+  {
+   "href": "javascript:void(0)",
+   "items": [
+    "javascript:void(0)"
+   ]
+  },
+  {
+   "href": "mailto:a@b.com",
+   "items": [
+    "mailto:a@b.com"
+   ]
+  },
+  {
+   "href": "https://다른사이트.kr/기사/1",
+   "items": [
+    "https://xn--2j1bu8jcugoqh97o.kr/%EA%B8%B0%EC%82%AC/1"
+   ]
+  }
+ ],
+ "pagination": [
+  {
+   "url": "https://news.example.com/news",
+   "pageNumber": 1
+  },
+  {
+   "url": "https://news.example.com/news/3",
+   "pageNumber": 3
+  },
+  {
+   "url": "https://news.example.com/news?cp=5",
+   "pageNumber": 5
+  },
+  {
+   "url": "https://news.example.com/news?page=7",
+   "pageNumber": 7
+  },
+  {
+   "url": "https://news.example.com/news/abc",
+   "pageNumber": 1
+  }
+ ],
+ "window": [
+  {
+   "hours": 36,
+   "offsetHours": 0,
+   "kept": 1
+  },
+  {
+   "hours": 36,
+   "offsetHours": -1,
+   "kept": 1
+  },
+  {
+   "hours": 36,
+   "offsetHours": -35,
+   "kept": 1
+  },
+  {
+   "hours": 36,
+   "offsetHours": -36,
+   "kept": 1
+  },
+  {
+   "hours": 36,
+   "offsetHours": -37,
+   "kept": 0
+  },
+  {
+   "hours": 36,
+   "offsetHours": -168,
+   "kept": 0
+  },
+  {
+   "hours": 36,
+   "offsetHours": 1,
+   "kept": 1
+  },
+  {
+   "hours": 36,
+   "offsetHours": 2,
+   "kept": 1
+  },
+  {
+   "hours": 36,
+   "offsetHours": 3,
+   "kept": 0
+  },
+  {
+   "hours": 6,
+   "offsetHours": 0,
+   "kept": 1
+  },
+  {
+   "hours": 6,
+   "offsetHours": -5,
+   "kept": 1
+  },
+  {
+   "hours": 6,
+   "offsetHours": -6,
+   "kept": 1
+  },
+  {
+   "hours": 6,
+   "offsetHours": -7,
+   "kept": 0
+  }
+ ],
+ "clampWindowHours": [
+  {
+   "input": 0,
+   "clamped": 36
+  },
+  {
+   "input": -5,
+   "clamped": 36
+  },
+  {
+   "input": 3,
+   "clamped": 6
+  },
+  {
+   "input": 6,
+   "clamped": 6
+  },
+  {
+   "input": 36,
+   "clamped": 36
+  },
+  {
+   "input": 168,
+   "clamped": 168
+  },
+  {
+   "input": 999,
+   "clamped": 168
+  },
+  {
+   "input": 1.9,
+   "clamped": 6
+  },
+  {
+   "input": "NaN",
+   "clamped": 36
+  },
+  {
+   "input": "Infinity",
+   "clamped": 36
+  }
+ ],
+ "nextRunAt": [
+  {
+   "hour": 0,
+   "now": 1787823000000,
+   "nextRunAt": 1787842800000
+  },
+  {
+   "hour": 6,
+   "now": 1787823000000,
+   "nextRunAt": 1787864400000
+  },
+  {
+   "hour": 9,
+   "now": 1787823000000,
+   "nextRunAt": 1787875200000
+  },
+  {
+   "hour": 15,
+   "now": 1787823000000,
+   "nextRunAt": 1787896800000
+  },
+  {
+   "hour": 23,
+   "now": 1787823000000,
+   "nextRunAt": 1787839200000
+  },
+  {
+   "hour": -1,
+   "now": 1787823000000,
+   "nextRunAt": 1787842800000
+  },
+  {
+   "hour": 24,
+   "now": 1787823000000,
+   "nextRunAt": 1787839200000
+  },
+  {
+   "hour": 6.7,
+   "now": 1787823000000,
+   "nextRunAt": 1787864400000
+  }
+ ],
+ "robots": [
+  {
+   "text": "User-agent: *\nDisallow: /",
+   "url": "https://x.com/a",
+   "allowed": false
+  },
+  {
+   "text": "User-agent: *\nAllow: /news\nDisallow: /",
+   "url": "https://x.com/news/1",
+   "allowed": true
+  },
+  {
+   "text": "User-agent: *\nDisallow: /admin",
+   "url": "https://x.com/news/1",
+   "allowed": true
+  },
+  {
+   "text": "User-agent: SignalistResearchBot\nDisallow: /\n\nUser-agent: *\nAllow: /",
+   "url": "https://x.com/a",
+   "allowed": false
+  },
+  {
+   "text": "User-agent: *\nDisallow:",
+   "url": "https://x.com/a",
+   "allowed": true
+  },
+  {
+   "text": "User-agent: *\nDisallow: /*.pdf$",
+   "url": "https://x.com/a.pdf",
+   "allowed": false
+  },
+  {
+   "text": "",
+   "url": "https://x.com/a",
+   "allowed": true
+  },
+  {
+   "text": "User-agent: googlebot\nDisallow: /",
+   "url": "https://x.com/a",
+   "allowed": true
+  }
+ ],
+ "analysis": [
+  {
+   "text": "삼성전자가 3분기 영업이익 컨센서스를 크게 상회하는 실적을 발표했다. 반도체 수요 회복이 이어지고 있다.",
+   "result": {
+    "symbol": "MARKET",
+    "sentiment": "긍정",
+    "sentimentScore": 61,
+    "relevance": 58,
+    "materiality": "보통",
+    "eventType": "실적·가이던스",
+    "impactHorizon": "중기(1~2분기)",
+    "confidence": 57.28888888888889,
+    "scoreAdjustment": 2,
+    "summary": "시장 전체 관련 실적·가이던스 뉴스입니다. 이익 기대 또는 사업 가시성에 우호적 신호로 분류했습니다.",
+    "keyEvidence": [
+     "삼성전자가 3분기 영업이익 컨센서스를 크게 상회하는 실적을 발표했다.",
+     "반도체 수요 회복이 이어지고 있다."
+    ],
+    "bullCase": "보도 내용이 실제 매출·이익 추정치 상향으로 연결되면 주가 재평가의 근거가 됩니다.",
+    "bearCase": "기사에 계약 금액·이익 기여 시점이 없으면 기대감만 선반영됐을 가능성이 있습니다.",
+    "watchItems": [
+     "회사 공시 또는 공식 발표로 사실 확인",
+     "다음 실적 추정치 변화",
+     "동일 사건의 후속 보도와 가격·거래량 반응"
+    ],
+    "engine": "규칙 기반 데모"
+   }
+  },
+  {
+   "text": "HD현대중공업 노조가 파업을 가결했다. 임단협 난항으로 생산 차질이 우려된다.",
+   "result": {
+    "symbol": "MARKET",
+    "sentiment": "부정",
+    "sentimentScore": 39,
+    "relevance": 48,
+    "materiality": "낮음",
+    "eventType": "산업·시장동향",
+    "impactHorizon": "당일",
+    "confidence": 52.955555555555556,
+    "scoreAdjustment": -1,
+    "summary": "시장 전체 관련 산업·시장동향 뉴스입니다. 실적 또는 밸류에이션의 하방 위험을 높일 수 있는 신호로 분류했습니다.",
+    "keyEvidence": [
+     "HD현대중공업 노조가 파업을 가결했다.",
+     "임단협 난항으로 생산 차질이 우려된다."
+    ],
+    "bullCase": "추가 공시에서 정량적 성과가 확인되면 중립 판단이 개선될 수 있습니다.",
+    "bearCase": "부정 요인이 장기화되거나 비용으로 현실화되면 현재 기대치를 낮춰야 합니다.",
+    "watchItems": [
+     "회사 공시 또는 공식 발표로 사실 확인",
+     "다음 실적 추정치 변화",
+     "동일 사건의 후속 보도와 가격·거래량 반응"
+    ],
+    "engine": "규칙 기반 데모"
+   }
+  },
+  {
+   "text": "코스피가 소폭 하락 마감했다. 외국인은 순매도를 이어갔다.",
+   "result": {
+    "symbol": "MARKET",
+    "sentiment": "부정",
+    "sentimentScore": 39,
+    "relevance": 48,
+    "materiality": "낮음",
+    "eventType": "산업·시장동향",
+    "impactHorizon": "당일",
+    "confidence": 52.71111111111111,
+    "scoreAdjustment": -1,
+    "summary": "시장 전체 관련 산업·시장동향 뉴스입니다. 실적 또는 밸류에이션의 하방 위험을 높일 수 있는 신호로 분류했습니다.",
+    "keyEvidence": [
+     "코스피가 소폭 하락 마감했다. 외국인은 순매도를 이어갔다."
+    ],
+    "bullCase": "추가 공시에서 정량적 성과가 확인되면 중립 판단이 개선될 수 있습니다.",
+    "bearCase": "부정 요인이 장기화되거나 비용으로 현실화되면 현재 기대치를 낮춰야 합니다.",
+    "watchItems": [
+     "회사 공시 또는 공식 발표로 사실 확인",
+     "다음 실적 추정치 변화",
+     "동일 사건의 후속 보도와 가격·거래량 반응"
+    ],
+    "engine": "규칙 기반 데모"
+   }
+  },
+  {
+   "text": "카카오뱅크와 카카오페이가 규제 리스크에 직면했다. 금융당국이 조사에 착수했다.",
+   "result": {
+    "symbol": "MARKET",
+    "sentiment": "부정",
+    "sentimentScore": 39,
+    "relevance": 53,
+    "materiality": "보통",
+    "eventType": "규제·법률",
+    "impactHorizon": "단기(1~4주)",
+    "confidence": 54.955555555555556,
+    "scoreAdjustment": -1,
+    "summary": "시장 전체 관련 규제·법률 뉴스입니다. 실적 또는 밸류에이션의 하방 위험을 높일 수 있는 신호로 분류했습니다.",
+    "keyEvidence": [
+     "카카오뱅크와 카카오페이가 규제 리스크에 직면했다."
+    ],
+    "bullCase": "추가 공시에서 정량적 성과가 확인되면 중립 판단이 개선될 수 있습니다.",
+    "bearCase": "부정 요인이 장기화되거나 비용으로 현실화되면 현재 기대치를 낮춰야 합니다.",
+    "watchItems": [
+     "회사 공시 또는 공식 발표로 사실 확인",
+     "다음 실적 추정치 변화",
+     "동일 사건의 후속 보도와 가격·거래량 반응"
+    ],
+    "engine": "규칙 기반 데모"
+   }
+  },
+  {
+   "text": "SK하이닉스는 배당을 확대하고 자사주 매입을 결정했다.",
+   "result": {
+    "symbol": "MARKET",
+    "sentiment": "긍정",
+    "sentimentScore": 61,
+    "relevance": 58,
+    "materiality": "보통",
+    "eventType": "산업·시장동향",
+    "impactHorizon": "단기(1~4주)",
+    "confidence": 56.666666666666664,
+    "scoreAdjustment": 2,
+    "summary": "시장 전체 관련 산업·시장동향 뉴스입니다. 이익 기대 또는 사업 가시성에 우호적 신호로 분류했습니다.",
+    "keyEvidence": [
+     "SK하이닉스는 배당을 확대하고 자사주 매입을 결정했다."
+    ],
+    "bullCase": "보도 내용이 실제 매출·이익 추정치 상향으로 연결되면 주가 재평가의 근거가 됩니다.",
+    "bearCase": "기사에 계약 금액·이익 기여 시점이 없으면 기대감만 선반영됐을 가능성이 있습니다.",
+    "watchItems": [
+     "회사 공시 또는 공식 발표로 사실 확인",
+     "다음 실적 추정치 변화",
+     "동일 사건의 후속 보도와 가격·거래량 반응"
+    ],
+    "engine": "규칙 기반 데모"
+   }
+  }
+ ],
+ "keywords": [
+  {
+   "title": "임단협 난항 HD현대중 노조, 파업 가결",
+   "body": "노조는 파업 찬반투표에서 재적 대비 66.19%가 찬성했다고 밝혔다.",
+   "keywords": [
+    "노조",
+    "파업",
+    "HD현대중",
+    "가결",
+    "난항",
+    "임단협"
+   ]
+  },
+  {
+   "title": "삼성전자 3분기 실적 발표",
+   "body": "영업이익이 컨센서스를 상회했다. 반도체 부문이 회복세를 보였다.",
+   "keywords": [
+    "3분기",
+    "삼성전자",
+    "실적"
+   ]
+  }
+ ],
+ "symbols": [
+  {
+   "text": "삼성전자와 SK하이닉스가 반도체 업황 회복의 수혜를 볼 전망이다.",
+   "matches": [
+    {
+     "symbol": "000660",
+     "company": "SK하이닉스",
+     "market": "KR",
+     "sector": "반도체",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    },
+    {
+     "symbol": "005930",
+     "company": "삼성전자",
+     "market": "KR",
+     "sector": "반도체",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    }
+   ]
+  },
+  {
+   "text": "카카오뱅크 실적이 개선됐다. 카카오는 별도로 규제 이슈가 있다.",
+   "matches": [
+    {
+     "symbol": "323410",
+     "company": "카카오뱅크",
+     "market": "KR",
+     "sector": "은행",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    },
+    {
+     "symbol": "035720",
+     "company": "카카오",
+     "market": "KR",
+     "sector": "인터넷",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    }
+   ]
+  },
+  {
+   "text": "카카오톡으로 공유하기 · 네이버로 공유하기",
+   "matches": [
+    {
+     "symbol": "035420",
+     "company": "NAVER",
+     "market": "KR",
+     "sector": "인터넷",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    }
+   ]
+  },
+  {
+   "text": "HD현대중공업 노조가 파업을 가결했다. HD현대는 지주사다.",
+   "matches": [
+    {
+     "symbol": "329180",
+     "company": "HD현대중공업",
+     "market": "KR",
+     "sector": "조선",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    },
+    {
+     "symbol": "267250",
+     "company": "HD현대",
+     "market": "KR",
+     "sector": "지주",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    }
+   ]
+  },
+  {
+   "text": "AAPL과 MSFT가 상승했다. 한편 AAPLE 같은 오타는 종목이 아니다.",
+   "matches": [
+    {
+     "symbol": "AAPL",
+     "company": "Apple",
+     "market": "US",
+     "sector": "IT하드웨어",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    },
+    {
+     "symbol": "MSFT",
+     "company": "Microsoft",
+     "market": "US",
+     "sector": "소프트웨어",
+     "mentions": 1,
+     "relevance": 46,
+     "matchType": "사전"
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "htmlLength": 90,
+   "body": "첫 문단입니다. 두 번째 문단입니다. 무단 전재 및 재배포 금지"
+  },
+  {
+   "htmlLength": 546,
+   "body": "문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다. 문단 태그가 없는 아주 긴 블록입니다."
+  },
+  {
+   "htmlLength": 28,
+   "body": "짧음"
+  }
+ ],
+ "feedFixture": [
+  {
+   "title": "여당 연찬회에서 나온 단일 대오 요구와 지도부 책임론",
+   "url": "https://news.example.com/view/AKR20260827173200001",
+   "excerpt": "전당대회를 앞두고 계파 갈등이 다시 불거졌다.",
+   "publishedAt": 1787822287000
+  },
+  {
+   "title": "중부 지방 호우주의보 해제, 남부는 폭염경보 유지",
+   "url": "https://news.example.com/view/AKR20260827179500051",
+   "excerpt": "기상청은 오후 6시를 기해 호우주의보를 해제했다.",
+   "publishedAt": 1787817900000
+  }
+ ],
+ "htmlFixture": {
+  "items": [
+   {
+    "title": "여당 연찬회에서 나온 단일 대오 요구와 지도부 책임론",
+    "url": "https://news.example.com/view/AKR20260827173200001",
+    "excerpt": "전당대회를 앞두고 계파 갈등이 다시 불거지면서 지도부 책임론과 단일 대오 요구가 동시에 터져 나왔다. 참석자들은 비공개 토론에서 공천 룰과 지역구 조정 문제를 두고 두 시간 넘게 격론을 벌였고, 일부 의원은 지도부가 먼저 거취를 정리해야 한다고 주장했다. 반대편에서는 지금 지도부를 흔들면 예산 국면에서 협상력이 떨어진다는 반론이 나왔다. 원내대표는 마무리 발언에서 내부 분열이 최대의 적이라며 표결로 정한 사안은 함께 책임지자고 당부했다. 다만 구체적인 공천 기준 발표 시점은 이번 연찬회에서도 확정되지 않았고, 관련 논의는 다음 주 의원총회로 넘어갔다. 참석 의원 상당수는 비공개 회의 직후 취재진의 질문에 말을 아꼈으며, 일부는 추가 논의가 필요하다는 원론적인 답변만 내놨다. 회의장 밖에서는 지역 당원들이 공천 기준 공개를 요구하는 손팻말을 들고 서 있었다. 08-27 18:18",
+    "publishedAt": 1787822280000
+   },
+   {
+    "title": "중부 지방 호우주의보 해제, 남부는 폭염경보 유지",
+    "url": "https://news.example.com/view/AKR20260827179500051",
+    "excerpt": "기상청은 오후 6시를 기해 중부 지방에 내려진 호우주의보를 해제했다고 밝혔다. 08-27 17:05",
+    "publishedAt": 1787817900000
+   },
+   {
+    "title": "중앙은행 9월 통화안정증권 발행 계획 공개",
+    "url": "https://news.example.com/view/AKR20260826118800002",
+    "excerpt": "발행 한도는 전월과 같은 수준으로 유지됐다. 08-26 21:00",
+    "publishedAt": 1787745600000
+   }
+  ],
+  "nextPage": "https://news.example.com/news/2"
+ },
+ "liveFeedFixture": {
+  "file": "pages/yna-economy.xml",
+  "url": "https://www.yna.co.kr/rss/economy.xml",
+  "items": [
+   {
+    "title": "삼성 '갤럭시 S26 FE' 내달 4일 출시…AI 기능 강화",
+    "url": "https://www.yna.co.kr/view/AKR20260827161600017",
+    "excerpt": "(서울=연합뉴스) 박형빈 기자 = 삼성전자[005930]가 갤럭시S 시리즈의 주요 기능을 상대적으로 낮은 가격에 담은 '팬 에디션'(FE) 신제...",
+    "publishedAt": 1787832000000
+   },
+   {
+    "title": "임단협 난항 HD현대중 노조, 파업 가결…재적 대비 66.19% 찬성",
+    "url": "https://www.yna.co.kr/view/AKR20260827190800057",
+    "excerpt": "(울산=연합뉴스) 김근주 기자 = HD현대중공업 노동조합(금속노조 현대중공업지부)이 27일 올해 임금 및 단체협약 관련 파업권을 확보했다.",
+    "publishedAt": 1787830017000
+   },
+   {
+    "title": "다음달 개장 거래소 애프터마켓, '퇴근길 ETF 거래' 막힐 듯",
+    "url": "https://www.yna.co.kr/view/AKR20260827186600008",
+    "excerpt": "(서울=연합뉴스) 김유아 기자 = 내달 개장하는 한국거래소 애프터마켓(오후 4∼8시)에서는 상장지수상품(ETP)이 거래되지 않는 방향으로 가닥이...",
+    "publishedAt": 1787828372000
+   },
+   {
+    "title": "검찰, '해직교사 특채' 김석준 부산교육감 2심 무죄에 상고",
+    "url": "https://www.yna.co.kr/view/AKR20260827188200051",
+    "excerpt": "(부산=연합뉴스) 차근호 기자 = 해직 교사 특별채용 과정에 부당하게 개입한 혐의로 기소돼 항소심에서 무죄를 선고받은 김석준 부산교육감이 대법원...",
+    "publishedAt": 1787827767000
+   },
+   {
+    "title": "국민성장펀드, 로봇기업 원익로보틱스에 3천500억 투자",
+    "url": "https://www.yna.co.kr/view/AKR20260827185900002",
+    "excerpt": "(서울=연합뉴스) 강수련 기자 = 국민성장펀드가 로봇 산업 직접 투자와 K-콘텐츠 사업 지분 투자에 나선다.",
+    "publishedAt": 1787826378000
+   },
+   {
+    "title": "수원시, '경제자유구역 지정·정조능행차 국가사업화' 정부 건의",
+    "url": "https://www.yna.co.kr/view/AKR20260827183200061",
+    "excerpt": "(수원=연합뉴스) 이영주 기자 = 경기 수원시는 경제자유구역 지정을 통한 K-실리콘밸리 완성과 정조대왕 능 행차 K-컬처로드 국가 사업화를 정부...",
+    "publishedAt": 1787824856000
+   },
+   {
+    "title": "새마을금고 집단대출 취급 재개…중단 6개월만(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827101551002",
+    "excerpt": "(서울=연합뉴스) 김지연 기자 = 새마을금고가 정부의 가계대출 규제로 약 반년간 막아놨던 집단대출을 27일 재개했다.",
+    "publishedAt": 1787824141000
+   },
+   {
+    "title": "DN솔루션즈, 인도 첫 공장 준공…\"공작기계 첨단 비전 제시\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827182300003",
+    "excerpt": "(서울=연합뉴스) 장하나 기자 = 글로벌 공작기계 기업 DN솔루션즈가 인도에 첫 제조공장을 준공했다고 27일 밝혔다.",
+    "publishedAt": 1787823632000
+   },
+   {
+    "title": "한투운용 유가증권펀드·MMF 사업, 한투밸류운용으로 흡수합병",
+    "url": "https://www.yna.co.kr/view/AKR20260827180200008",
+    "excerpt": "(서울=연합뉴스) 임은진 기자 = 한국투자신탁운용의 유가증권펀드 등 일부 사업 부문이 한국투자밸류자산운용으로 이관된다.",
+    "publishedAt": 1787823228000
+   },
+   {
+    "title": "청양 지천댐 건설 발표에 주민들 \"환영 vs 거부\"…입장차 '극명'(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827135151063",
+    "excerpt": "(세종·홍성=연합뉴스) 양영석 김준범 기자 = 기후에너지환경부가 27일 지천댐을 건설하는 것으로 확정·발표하자 댐이 들어설 충남 청양지역 주민 ...",
+    "publishedAt": 1787821848000
+   },
+   {
+    "title": "[연합뉴스 이 시각 헤드라인] - 18:00",
+    "url": "https://www.yna.co.kr/view/AKR20260827169100011",
+    "excerpt": "■ 네팔 홍수로 고립된 국민 10명, 생명위협 없지만 구조엔 시간",
+    "publishedAt": 1787821201000
+   },
+   {
+    "title": "한일미래파트너십재단, 일본 교사 50명 한국 초청…\"협력 확대\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827176300003",
+    "excerpt": "(서울=연합뉴스) 홍규빈 기자 = 한일미래파트너십재단은 27일 서울 영등포구 FKI타워에서 '제6회 한일 고교교사 교류사업' 환송 리셉션을 열었...",
+    "publishedAt": 1787821200000
+   },
+   {
+    "title": "이수만 SM서 5년간 600억 받아…법원 \"과도하지만 정상가 입증 안돼\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827176200004",
+    "excerpt": "(서울=연합뉴스) 이영섭 기자 = SM엔터테인먼트(SM)에 부과된 세금 128억여원을 취소해야 한다는 판결이 나왔다.",
+    "publishedAt": 1787821078000
+   },
+   {
+    "title": "충남도, 첨단산업 뒷받침 '전력·용수·인력' 3력 확보 나선다",
+    "url": "https://www.yna.co.kr/view/AKR20260827174700063",
+    "excerpt": "(홍성=연합뉴스) 김준범 기자 = 충남도는 인공지능(AI)과 첨단산업 투자 확대에 대비해 전력·용수·인력 등 이른바 '3력' 확보에 나선다고 2...",
+    "publishedAt": 1787820808000
+   },
+   {
+    "title": "KB금융 회장 후보 권광석·양종희·이재근 압축(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827173700002",
+    "excerpt": "(서울=연합뉴스) 한지훈 기자 = KB금융지주 차기 회장 후보가 권광석 전 우리은행장, 양종희 KB금융[105560] 현 회장, 이재근 KB금융...",
+    "publishedAt": 1787819597000
+   },
+   {
+    "title": "\"여성 CEO 역량 강화에 네트워킹도\"…여경협, 권역별 교육 개최",
+    "url": "https://www.yna.co.kr/view/AKR20260827161700030",
+    "excerpt": "(서울=연합뉴스) 이상서 기자 = \"인공지능(AI)과 관련한 지식은 어느 정도 갖춘 편인데, 빠르게 변하는 시장 속에서 이걸 사업에 어떻게 접목...",
+    "publishedAt": 1787819579000
+   },
+   {
+    "title": "한은, 9월 최대 7조원 규모 통화안정증권 발행",
+    "url": "https://www.yna.co.kr/view/AKR20260827170300002",
+    "excerpt": "(서울=연합뉴스) 이도흔 기자 = 한국은행은 다음 달 최대 7조원 규모의 통화안정증권(통안증권)을 발행할 계획이라고 27일 밝혔다.",
+    "publishedAt": 1787819255000
+   },
+   {
+    "title": "해수부, 적조 위기경보 '경계'로 상향…경남 2개 해역 주의보",
+    "url": "https://www.yna.co.kr/view/AKR20260827172100030",
+    "excerpt": "(서울=연합뉴스) 한주홍 기자 = 해양수산부는 27일 오후 6시부터 적조 위기경보를 기존 '주의'에서 '경계'로 상향한다고 밝혔다.",
+    "publishedAt": 1787819182000
+   },
+   {
+    "title": "[1보] KB금융 회장 후보 권광석·양종희·이재근 압축",
+    "url": "https://www.yna.co.kr/view/AKR20260827172300002",
+    "excerpt": "(",
+    "publishedAt": 1787819119000
+   },
+   {
+    "title": "헌재, '5인미만 사업장도 공휴일 유급휴일 보장' 헌법소원 각하",
+    "url": "https://www.yna.co.kr/view/AKR20260827170900004",
+    "excerpt": "(서울=연합뉴스) 이미령 기자 = 5인 미만 사업장에는 공휴일과 대체공휴일을 유급휴일로 보장하지 않는 현행 공무원법이 위헌이라며 제기된 헌법소원...",
+    "publishedAt": 1787818948000
+   },
+   {
+    "title": "국고채 금리 상승 후 하락 마감…\"예상보다 '비둘기파적' 평가\" (종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827161251008",
+    "excerpt": "(서울=연합뉴스) 김태종 기자 = 한국은행 금융통화위원회가 27일 기준금리를 '백투백'(2개월 연속) 인상했지만, 국고채 금리는 일제히 하락 마...",
+    "publishedAt": 1787818455000
+   },
+   {
+    "title": "9월 개인투자용 국채 2천300억 발행…퇴직연금계좌로 매입 가능",
+    "url": "https://www.yna.co.kr/view/AKR20260827167700002",
+    "excerpt": "(세종=연합뉴스) 김수현 기자 = 재정경제부는 다음 달 개인 투자용 국채를 2천300억원 발행할 예정이라고 27일 밝혔다.",
+    "publishedAt": 1787818303000
+   },
+   {
+    "title": "[일문일답] 한은총재 \"연속 인상, 경제안정 선제대응…향후 6개월은 완만히\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827114300002",
+    "excerpt": "(서울=연합뉴스) 이도흔 기자 = 신현송 한국은행 총재는 27일 물가 등 거시경제 안정을 도모하기 위해 선제적 대응이 필요하다고 판단해서 연속 ...",
+    "publishedAt": 1787818283000
+   },
+   {
+    "title": "정부, 외국인주택투기 감시 강화…사업자대출 추가점검",
+    "url": "https://www.yna.co.kr/view/AKR20260827091200001",
+    "excerpt": "(서울=연합뉴스) 황윤기 기자 = 국무조정실 부동산감독추진단은 27일 제19차 부동산 불법행위 대응협의회를 열고 불법 부동산 투기 근절 의지를 ...",
+    "publishedAt": 1787817601000
+   },
+   {
+    "title": "창원 단감 중국시장 공략 청신호…중국 유통단체, 생산현장 찾아",
+    "url": "https://www.yna.co.kr/view/AKR20260827164900052",
+    "excerpt": "(창원=연합뉴스) 김선경 기자 = 경남 창원시는 27일 중국 농산물 유통단체인 '전국도시농산물도매시장연합회' 관계자들이 창원 단감 생산현장을 찾...",
+    "publishedAt": 1787817590000
+   },
+   {
+    "title": "태영건설, 유상증자…한국증권금융 등에 3자 배정",
+    "url": "https://www.yna.co.kr/view/AKR20260827159400008",
+    "excerpt": "(서울=연합뉴스) 코스피 상장사 태영건설[009410]은 제3자배정 유상증자를 결정했다고 27일 공시했다.",
+    "publishedAt": 1787817171000
+   },
+   {
+    "title": "횡성한우, 소비자 신뢰 대표브랜드 19년 연속 대상",
+    "url": "https://www.yna.co.kr/view/AKR20260827162900062",
+    "excerpt": "(횡성=연합뉴스) 임보연 기자 = 강원 횡성한우가 '대한민국 소비자신뢰 대표브랜드 대상'에서 19년 연속 대상을 받았다.",
+    "publishedAt": 1787816985000
+   },
+   {
+    "title": "강원 국도·국지도 9개 사업 예타 통과…9천895억 규모",
+    "url": "https://www.yna.co.kr/view/AKR20260827157800062",
+    "excerpt": "(춘천=연합뉴스) 이재현 기자 = 춘천 서면∼신북 우회도로를 비롯한 강원지역 국도·국지도 9개 사업이 제6차 국도·국지도 건설계획 일괄 예비타당...",
+    "publishedAt": 1787816720000
+   },
+   {
+    "title": "원/달러 환율 1,380.9원…'덜 매파적' 금통위에 낙폭 반납(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827042851002",
+    "excerpt": "(서울=연합뉴스) 김지연 기자 = 원/달러 환율은 27일 한국은행 금융통화위원회의 기준금리 인상에 1,380원 밑으로 내려갔다가 예상보다 덜 매...",
+    "publishedAt": 1787816616000
+   },
+   {
+    "title": "국고채 금리 일제히 하락…3년물 연 3.755%",
+    "url": "https://www.yna.co.kr/view/AKR20260827161200008",
+    "excerpt": "(서울=연합뉴스) 27일 국고채 금리가 일제히 하락했다.",
+    "publishedAt": 1787816542000
+   },
+   {
+    "title": "배민, 페이코 결제 수단 도입…31일까지 순차 확대 적용",
+    "url": "https://www.yna.co.kr/view/AKR20260827157300030",
+    "excerpt": "(서울=연합뉴스) 홍국기 기자 = 우아한형제들은 배달의민족의 신규 간편결제 수단으로 NHN페이코의 '페이코(PAYCO)'를 도입해 오는 31일까...",
+    "publishedAt": 1787816021000
+   },
+   {
+    "title": "[게시판] iM뱅크, '전국 어린이미술공모전' 시상식",
+    "url": "https://www.yna.co.kr/view/AKR20260827156200053",
+    "excerpt": "▲ iM뱅크는 27일 대구 수성동 본점에서 '제22회 iM뱅크 전국 어린이미술공모전' 시상식을 개최했다. iM뱅크는 이번 공모전에 참여한 유치원...",
+    "publishedAt": 1787815616000
+   },
+   {
+    "title": "[게시판] 관세청 개청 56주년 기념식…\"마약 차단, 경제범죄 척결\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827144400002",
+    "excerpt": "▲ 관세청은 27일 정부대전청사에서 개청 56주년 기념식을 열었다. 이종욱 청장은 기념사에서 마약 밀수 차단, 경제 범죄 척결, 수출·물가안정 ...",
+    "publishedAt": 1787815450000
+   },
+   {
+    "title": "하나은행, 토스와 '하나 만보기 적금 시즌2'…최고 연 4.5%",
+    "url": "https://www.yna.co.kr/view/AKR20260827152500002",
+    "excerpt": "(서울=연합뉴스) 이도흔 기자 = 하나은행은 누적 걸음 수 구간에 따라 우대금리 혜택을 주는 생활밀착형 금융상품 '하나 만보기 적금 시즌2'를 ...",
+    "publishedAt": 1787815430000
+   },
+   {
+    "title": "카카오뱅크, 6개 브랜드 혜택 모은 '26주적금'",
+    "url": "https://www.yna.co.kr/view/AKR20260827152200002",
+    "excerpt": "(서울=연합뉴스) 이도흔 기자 = 카카오뱅크[323410]는 배달의민족, GS칼텍스, 에버랜드, CJ제일제당[097950], 교보문고, 한국투자...",
+    "publishedAt": 1787815348000
+   },
+   {
+    "title": "신협자산관리회사, 부실채권 처리 가능해진다…건전성 강화",
+    "url": "https://www.yna.co.kr/view/AKR20260827141000002",
+    "excerpt": "(서울=연합뉴스) 강류나 기자 = 앞으로 신협자산관리회사도 '대부채권 양도가능 기관' 지위를 얻어 부실채권(NPL)을 처리할 수 있게 된다.",
+    "publishedAt": 1787815342000
+   },
+   {
+    "title": "더코디, 15억원 제3자배정 유상증자",
+    "url": "https://www.yna.co.kr/view/AKR20260827154900008",
+    "excerpt": "(서울=연합뉴스) 코스닥 상장사 더코디[224060]는 운영자금 등 약 15억원을 조달하고자 제3자배정 유상증자를 결정했다고 27일 공시했다.",
+    "publishedAt": 1787815215000
+   },
+   {
+    "title": "코스피, 엔비디아 호실적에 1%대 상승…금리인상에 상승폭 축소(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827142951008",
+    "excerpt": "(서울=연합뉴스) 김유향 기자 = 코스피가 27일 글로벌 인공지능(AI) 대장주 엔비디아의 깜짝 호실적에 힘입어 장중 3% 가까이 급등했다가 한...",
+    "publishedAt": 1787815182000
+   },
+   {
+    "title": "경기도, 체납자 압류 물품 공매로 570건 5억9천만원 징수",
+    "url": "https://www.yna.co.kr/view/AKR20260827153100061",
+    "excerpt": "(수원=연합뉴스) 최찬흥 기자 = 경기도는 27일 킨텍스 그랜드볼룸에서 진행한 고액 체납자 압류 물품 620점에 대한 현장 공매에서 570건이 ...",
+    "publishedAt": 1787814706000
+   },
+   {
+    "title": "보훈공단-보건복지인재원, 장기요양 돌봄인재 양성 맞손",
+    "url": "https://www.yna.co.kr/view/AKR20260827147700062",
+    "excerpt": "(원주=연합뉴스) 임보연 기자 = 한국보훈복지의료공단은 27일 원주 본사에서 한국보건복지인재원과 장기요양 분야 인재 양성을 위한 업무협약을 했다...",
+    "publishedAt": 1787813748000
+   },
+   {
+    "title": "[바이오스냅] 한미사이언스, 거제·통영 수해 지역에 물품 지원",
+    "url": "https://www.yna.co.kr/view/AKR20260827147200017",
+    "excerpt": "(서울=연합뉴스) 신선미 기자 = 한미그룹은 집중호우로 피해를 본 경남 지역 주민을 위해 구호 물품을 지원했다.",
+    "publishedAt": 1787813656000
+   },
+   {
+    "title": "삼전·닉스, 급등후 상승폭 축소…1∼2%대 상승 마감(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827036151008",
+    "excerpt": "(서울=연합뉴스) 황철환 기자 = 글로벌 인공지능(AI) 대장주 엔비디아의 깜짝 호실적에 힘입어 27일 장 초반 한때 급등했던 삼성전자[0059...",
+    "publishedAt": 1787813535000
+   },
+   {
+    "title": "한은 \"IT 비중 더 커진다…성장률 한 단계 높아지는 기회\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827136400002",
+    "excerpt": "(서울=연합뉴스) 임지우 기자 = 한국은행은 반도체 경기 확장세가 적어도 내년 상반기까지는 지속될 것이라면서 경제 전체에서 반도체 등 정보기술(...",
+    "publishedAt": 1787813329000
+   },
+   {
+    "title": "한신평·무디스 \"사모대출 시스템 위기 제한적…국내 익스포저 55.9조\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827145100008",
+    "excerpt": "(서울=연합뉴스) 정회인 기자 = 글로벌 사모신용(Private Credit) 시장에서 부실과 환매 증가 등 위험 신호가 잇따르고 있지만 현 단...",
+    "publishedAt": 1787813251000
+   },
+   {
+    "title": "[특징주] 미국 루멘텀 상승에 국내 광통신주도 강세 마감(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827040951008",
+    "excerpt": "(서울=연합뉴스) 김유아 기자 = 간밤 미국 증시에서 광학 부품업체 루멘텀이 6%대 상승하자 27일 국내 광통신주도 덩달아 강세 마감했다.",
+    "publishedAt": 1787812672000
+   },
+   {
+    "title": "코스피, 1%대 상승 마감…기준금리 인상에 상승폭 축소",
+    "url": "https://www.yna.co.kr/view/AKR20260827142900008",
+    "excerpt": "(서울=연합뉴스) 김유향 기자 = 27일 코스피는 1%대의 상승을 기록했으나 한국은행의 기준금리 인상 이후 상승폭이 다소 축소됐다.",
+    "publishedAt": 1787812542000
+   },
+   {
+    "title": "외국환시세(8월27일·15:30 기준가)",
+    "url": "https://www.yna.co.kr/view/AKR20260827143100002",
+    "excerpt": "(15:30)",
+    "publishedAt": 1787812529000
+   },
+   {
+    "title": "'2년간 360만원 적금했더니 3배로' 순창 청년종자통장 '짭짤'",
+    "url": "https://www.yna.co.kr/view/AKR20260827140300055",
+    "excerpt": "(순창=연합뉴스) 최영수 기자 = 전북 순창군은 2024년부터 지원한 청년근로자 종자통장 사업을 통해 549명에게 만기 적립금으로 최대 1천11...",
+    "publishedAt": 1787812526000
+   },
+   {
+    "title": "[외환] 원/달러 환율 3.9원 내린 1,380.9원(15:30 기준가)",
+    "url": "https://www.yna.co.kr/view/AKR20260827141800002",
+    "excerpt": "(",
+    "publishedAt": 1787812518000
+   },
+   {
+    "title": "현대중공업터보기계, 2029년까지 포항에 공장 신설…100명 고용",
+    "url": "https://www.yna.co.kr/view/AKR20260827141500053",
+    "excerpt": "(포항=연합뉴스) 손대성 기자 = 터보기계 생산기업인 현대중공업터보기계가 경북 포항에 공장을 건립한다.",
+    "publishedAt": 1787812518000
+   },
+   {
+    "title": "대구시 \"군위 제1첨단산단 조성…미래·첨단 산업 중심\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827139400053",
+    "excerpt": "(대구=연합뉴스) 박세진 기자 = 대구시는 군위 제1첨단산업단지 조성 사업에 대한 내부 재무성 분석에서 사업 타당성이 확보된다는 결과가 나왔다고...",
+    "publishedAt": 1787812370000
+   },
+   {
+    "title": "양주시, 내달 18일까지 외국인 계절근로자 수요조사",
+    "url": "https://www.yna.co.kr/view/AKR20260827141200060",
+    "excerpt": "(양주=연합뉴스) 노승혁 기자 = 경기 양주시는 내년 외국인 계절근로자 고용을 희망하는 농가를 대상으로 다음 달 18일까지 수요조사를 진행한다고...",
+    "publishedAt": 1787812273000
+   },
+   {
+    "title": "LH, 2028년부터 연간 10만가구 착공…30조원 규모 발주",
+    "url": "https://www.yna.co.kr/view/AKR20260827125000003",
+    "excerpt": "(세종=연합뉴스) 오진송 기자 = 한국토지주택공사(LH)가 2028년부터 매년 10만가구 이상의 주택을 착공하고 연간 30조원 규모를 발주한다....",
+    "publishedAt": 1787812201000
+   },
+   {
+    "title": "한은 총재, 잭슨홀 회의 참석…G20·BIS 회의도",
+    "url": "https://www.yna.co.kr/view/AKR20260827138500002",
+    "excerpt": "(서울=연합뉴스) 한지훈 기자 = 신현송 한국은행 총재가 세계 중앙은행 총재들이 모이는 미국 잭슨홀 경제정책 심포지엄에 참석한다고 한은이 27일...",
+    "publishedAt": 1787812038000
+   },
+   {
+    "title": "폐광도시 태백, 청정메탄올로 승부…생산·물류·수요 구축",
+    "url": "https://www.yna.co.kr/view/AKR20260827140000062",
+    "excerpt": "(태백=연합뉴스) 이상학 기자 = 강원 태백시가 석탄산업 쇠퇴 이후 대체산업으로 청정메탄올에 대한 생산부터 물류, 수요까지 이어지는 산업 생태계...",
+    "publishedAt": 1787812002000
+   },
+   {
+    "title": "BNK금융그룹, 호우 피해 거제·통영에 성금 1억원 전달",
+    "url": "https://www.yna.co.kr/view/AKR20260827138700051",
+    "excerpt": "(부산=연합뉴스) 이영재 기자 = BNK금융그룹은 최근 집중호우로 피해를 본 경남 거제·통영 지역 주민의 일상 회복을 위해 대한적십자사 경남지사...",
+    "publishedAt": 1787811889000
+   },
+   {
+    "title": "환경단체 \"부산 엄궁대교 불법 공사재개\"…시 \"절차대로 진행\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827137700051",
+    "excerpt": "(부산=연합뉴스) 김재홍 기자 = 낙동강하구지키기전국시민행동은 27일 부산시의회 브리핑룸에서 기자회견을 열고 부산시가 엄궁대교 건설을 위한 물양...",
+    "publishedAt": 1787811822000
+   },
+   {
+    "title": "강원의료기기전시회 원주서 개최…147개 기업·기관 참가",
+    "url": "https://www.yna.co.kr/view/AKR20260827137600062",
+    "excerpt": "(원주=연합뉴스) 임보연 기자 = 국내외 의료기기 기업과 바이어가 한자리에 모이는 제22회 강원의료기기전시회(GMES 2026)가 9월 3∼4일...",
+    "publishedAt": 1787811806000
+   },
+   {
+    "title": "'최경환 의혹 제보' 이철 전 VIK 대표, 명예훼손 2심도 무죄",
+    "url": "https://www.yna.co.kr/view/AKR20260827138800004",
+    "excerpt": "(서울=연합뉴스) 김채린 기자 = 최경환 전 경제부총리의 신라젠 투자 의혹을 방송사에 허위 제보한 혐의로 재판에 넘겨진 이철 전 밸류인베스트코리...",
+    "publishedAt": 1787811632000
+   },
+   {
+    "title": "청양 지천댐 건설 발표에 주민들 \"환영 vs 거부\"…입장차 '극명'",
+    "url": "https://www.yna.co.kr/view/AKR20260827135100063",
+    "excerpt": "(세종=연합뉴스) 양영석 기자 = 기후에너지환경부가 27일 지천댐을 건설하는 것으로 확정·발표하자 댐이 들어설 충남 청양지역 주민 반응은 극명하...",
+    "publishedAt": 1787811585000
+   },
+   {
+    "title": "한국 금융 AI, PoC 넘어 실전으로…AWS·앤트로픽 \"AX 전환\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827134800017",
+    "excerpt": "(서울=연합뉴스) 오지은 기자 = 국내 금융권의 인공지능(AI) 도입 흐름이 기술 검증(PoC)과 파일럿 단계를 지나 서비스와 업무 전반에 적용...",
+    "publishedAt": 1787811140000
+   },
+   {
+    "title": "온라인 수출기업 \"물류비 지원 공백·통관 지연 개선해달라\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827133400030",
+    "excerpt": "(서울=연합뉴스) 구정모 기자 = 중소벤처기업부와 중소벤처기업진흥공단은 27일 대전 예람인재교육센터에서 온라인 수출 중소기업의 규제와 애로사항을...",
+    "publishedAt": 1787810952000
+   },
+   {
+    "title": "47명 몰린 대전 '노스펙' 5급 청년특보, 결과는 \"합격자 없음\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827134900063",
+    "excerpt": "(대전=연합뉴스) 박주영 기자 = 대전시가 공개 모집한 '청년특별보좌관'에 수십명이 몰렸지만, 결국 적격자가 없어 채용이 무산됐다.",
+    "publishedAt": 1787810882000
+   },
+   {
+    "title": "자동차 부품 제조기업, 함평 빛그린산단에 281억 투자",
+    "url": "https://www.yna.co.kr/view/AKR20260827134700054",
+    "excerpt": "(함평=연합뉴스) 장덕종 기자 = 전남광주 함평군은 27일 목우에이치텍·성원에스피와 투자협약을 맺었다.",
+    "publishedAt": 1787810807000
+   },
+   {
+    "title": "업권별 자금세탁방지 TF 운영…\"복잡화된 자금세탁 대응\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827111000002",
+    "excerpt": "(서울=연합뉴스) 김지연 기자 = 금융권이 점차 지능화되는 자금세탁 수법에 대응하기 위해 업권별 협회 차원에서 태스크포스(TF)를 운영하고 대응...",
+    "publishedAt": 1787810402000
+   },
+   {
+    "title": "국산 위성부품 개발해도 판로가…우주청 \"시장 연결 지원\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827093900017",
+    "excerpt": "(서울=연합뉴스) 신선미 기자 = 정부와 위성 부품 개발기업이 위성 산업 생태계 강화 방안을 논의하는 자리가 마련됐다.",
+    "publishedAt": 1787810401000
+   },
+   {
+    "title": "'4천억달러 시장 잡아라'…무협, K-할랄 글로벌 시장 진출 포럼",
+    "url": "https://www.yna.co.kr/view/AKR20260827121000003",
+    "excerpt": "(서울=연합뉴스) 장보인 기자 = 한국무역협회(KITA)는 27일 서울 강남구 트레이드타워에서 'K-할랄 글로벌 시장 진출 포럼'을 개최했다고 ...",
+    "publishedAt": 1787810401000
+   },
+   {
+    "title": "성남시, '분당재건축 정비예정물량 제한 폐지' 등 정부 건의",
+    "url": "https://www.yna.co.kr/view/AKR20260827128000061",
+    "excerpt": "(성남=연합뉴스) 이우성 기자 = 경기 성남시는 경기남부광역철도 신설 사업의 국가 계획 반영과 분당 재건축 연차별 정비예정물량 제한 폐지를 정부...",
+    "publishedAt": 1787810064000
+   },
+   {
+    "title": "한은 '연속 인상'에도…증권가 \"점도표 쇼크없다\" 안도",
+    "url": "https://www.yna.co.kr/view/AKR20260827126100008",
+    "excerpt": "(서울=연합뉴스) 강수지 기자 = 한국은행이 전달에 이어 연속으로 기준금리 인상을 단행했지만, 증권업계는 오히려 최악은 지났다며 안도하는 분위기...",
+    "publishedAt": 1787809702000
+   },
+   {
+    "title": "고양시, 경제자유구역 지정·수도권정비계획법 개정 건의",
+    "url": "https://www.yna.co.kr/view/AKR20260827125100060",
+    "excerpt": "(고양=연합뉴스) 노승혁 기자 = 경기 고양시는 27일 정부 서울청사와 청와대 영빈관에서 열린 '민선 9기 시장·군수·구청장 국정 설명회'에서 ...",
+    "publishedAt": 1787809308000
+   },
+   {
+    "title": "부안 하왕등도, 외국인 토지거래허가구역 지정…안보 특수성",
+    "url": "https://www.yna.co.kr/view/AKR20260827116000055",
+    "excerpt": "(전주=연합뉴스) 임채두 기자 = 전북특별자치도는 부안군 위도면 하왕등리 하왕등도가 외국인 토지거래허가구역으로 지정됐다고 27일 밝혔다.",
+    "publishedAt": 1787809136000
+   },
+   {
+    "title": "가톨릭관동대·연암대, 푸드테크·스마트팜 융합 연구개발 맞손",
+    "url": "https://www.yna.co.kr/view/AKR20260827125200062",
+    "excerpt": "(강릉=연합뉴스) 류호준 기자 = 가톨릭관동대학교와 연암대학교가 식품 기술과 스마트팜 분야의 연구개발과 기술창업, 국제공동연구 활성화를 위해 손...",
+    "publishedAt": 1787808820000
+   },
+   {
+    "title": "노동장관, 아세안+3 장관회의 참석…'AI 인재 1만명 양성' 소개",
+    "url": "https://www.yna.co.kr/view/AKR20260827069300530",
+    "excerpt": "(서울=연합뉴스) 한혜원 기자 = 김영훈 고용노동부 장관은 27일(현지시간) 태국에서 개최된 제14차 아세안+3 노동장관회의에 참석했다고 노동부...",
+    "publishedAt": 1787808600000
+   },
+   {
+    "title": "[연합뉴스 이 시각 헤드라인] - 14:30",
+    "url": "https://www.yna.co.kr/view/AKR20260827118000011",
+    "excerpt": "■ 한은총재 \"연속 인상, 가래 대신 호미…시장에 강한 시그널\"",
+    "publishedAt": 1787808600000
+   },
+   {
+    "title": "방미통위, AI 불법·유해정보 대응 강화…자율 안전조치 논의",
+    "url": "https://www.yna.co.kr/view/AKR20260827118700017",
+    "excerpt": "(서울=연합뉴스) 유현민 기자 = 방송미디어통신위원회는 27일 인공지능(AI) 서비스 확산에 따른 불법·유해 정보 노출 위험에 대응하기 위한 사...",
+    "publishedAt": 1787808418000
+   },
+   {
+    "title": "美비호에 달라진 쿠팡, 당혹스런 공정위…조사에 수년 걸릴 수도(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260826186251002",
+    "excerpt": "(세종=연합뉴스) 김수현 기자 = 할인 비용을 납품업체에 전가한 의혹을 받는 쿠팡이 공정거래위원회의 현장 조사를 거부하고 직권 조사 취소 소송까...",
+    "publishedAt": 1787807948000
+   },
+   {
+    "title": "광주은행, 미등록 이주민·이주아동 가정에 1억원 지원",
+    "url": "https://www.yna.co.kr/view/AKR20260827117500054",
+    "excerpt": "(전남광주=연합뉴스) 전승현 기자 = 광주은행은 27일 미등록 이주민 의료 및 생활안정 지원 후원금 1억원을 사단법인 한국이주민건강협회 위프렌즈...",
+    "publishedAt": 1787807442000
+   },
+   {
+    "title": "국토장관 \"탄천센터 주택 공급시 청년·신혼부부 공공주택 우선\"(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827041851003",
+    "excerpt": "(서울=연합뉴스) 임기창 기자 = 김윤덕 국토교통부 장관은 서울시가 주택 공급 대안 부지로 제안한 강남구 탄천물재생센터 부지와 관련, 센터를 옮...",
+    "publishedAt": 1787807106000
+   },
+   {
+    "title": "서울 아파트 매매가격 상승폭 확대…경기남부도 다시 강세",
+    "url": "https://www.yna.co.kr/view/AKR20260827082300003",
+    "excerpt": "(서울=연합뉴스) 임기창 기자 = 서울 아파트 주간 매매가격이 강북 등 중위권 이하 지역의 가파른 상승세에 오름폭을 확대했다. 경기권도 반도체 ...",
+    "publishedAt": 1787806804000
+   },
+   {
+    "title": "정부·통신3사, AI 시대 통신망 투자 확대…연내 종합대책",
+    "url": "https://www.yna.co.kr/view/AKR20260827084500017",
+    "excerpt": "(서울=연합뉴스) 박형빈 기자 = 정부와 이동통신 3사가 인공지능(AI) 시대에 대비한 차세대 통신망 투자 확대와 규제·세제 개선 방안을 논의하...",
+    "publishedAt": 1787806803000
+   },
+   {
+    "title": "한은 \"주가 하락에 소비 주춤…장기화 땐 추가 하방 압력\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827109600002",
+    "excerpt": "(서울=연합뉴스) 한지훈 기자 = 최근 증시 조정이 일부 소비 위축으로 이어지고 있다는 한국은행 분석이 27일 나왔다.",
+    "publishedAt": 1787806183000
+   },
+   {
+    "title": "전남광주 8월 기업심리지수, 제조업 하락·비제조업 상승",
+    "url": "https://www.yna.co.kr/view/AKR20260827107200054",
+    "excerpt": "(전남광주=연합뉴스) 전승현 기자 = 이달 전남광주지역 기업심리지수(CBSI)는 전달에 비해 제조업은 하락했지만, 비제조업은 상승한 것으로 나타...",
+    "publishedAt": 1787806072000
+   },
+   {
+    "title": "물가·집값·환율 잡으려 금리 미리 인상…이제는 속도조절",
+    "url": "https://www.yna.co.kr/view/AKR20260827100900002",
+    "excerpt": "(서울=연합뉴스) 한지훈 기자 = 신현송 한국은행 총재는 27일 기준금리를 연 3.00%로 2연속 올린 뒤 \"가래로 막을 것을 호미로 막은 것\"...",
+    "publishedAt": 1787805205000
+   },
+   {
+    "title": "면접 보고 취업까지…동작구, 맥도날드 50∼65세 구직자 모집",
+    "url": "https://www.yna.co.kr/view/AKR20260827105700004",
+    "excerpt": "(서울=연합뉴스) 정준영 기자 = 서울 동작구(구청장 류삼영)는 한국맥도날드와 함께 50∼65세 구직 구민을 대상으로 '현장면접 및 채용연계' ...",
+    "publishedAt": 1787805174000
+   },
+   {
+    "title": "한은, 올해 성장 전망 2.6→3.3% 상향…5년 만에 최고(종합2보)",
+    "url": "https://www.yna.co.kr/view/AKR20260827023052002",
+    "excerpt": "(서울=연합뉴스) 한지훈 임지우 이도흔 기자 = 한국은행이 올해 한국 경제 성장률 전망치를 기존 2.6%에서 3.3%로 상향 조정했다.",
+    "publishedAt": 1787805021000
+   },
+   {
+    "title": "ICT 인턴십 졸업생 취업률 89.3%…우수 학생·기업 시상",
+    "url": "https://www.yna.co.kr/view/AKR20260827052600017",
+    "excerpt": "(서울=연합뉴스) 박형빈 기자 = 과학기술정보통신부가 학부생의 ICT 기업 인턴십 참여를 지원하는 'ICT학점연계프로젝트인턴십' 우수 학생과 기...",
+    "publishedAt": 1787805001000
+   },
+   {
+    "title": "AI·폐자원 연구 키운다…선도연구센터 11곳 선정",
+    "url": "https://www.yna.co.kr/view/AKR20260827057100017",
+    "excerpt": "(서울=연합뉴스) 박상현 기자 = 과학기술정보통신부는 선도연구센터 11곳을 추가로 선정해 지정서와 현판을 수여했다고 27일 밝혔다.",
+    "publishedAt": 1787805001000
+   },
+   {
+    "title": "중기중앙회, 지자체와 충남 아산서 '中企 협동조합 워크숍'",
+    "url": "https://www.yna.co.kr/view/AKR20260827053600030",
+    "excerpt": "(서울=연합뉴스) 이상서 기자 = 중소기업중앙회는 중소벤처기업부 및 16개 광역지자체와 함께 27일 충남 아산에서 '2026 중소기업 협동조합 ...",
+    "publishedAt": 1787805001000
+   },
+   {
+    "title": "한은총재 \"연속 인상, 가래 대신 호미…시장에 강한 시그널\"(종합)",
+    "url": "https://www.yna.co.kr/view/AKR20260827087451002",
+    "excerpt": "(서울=연합뉴스) 한지훈 임지우 이도흔 기자 = 신현송 한국은행 총재는 27일 기준금리를 연속 인상한 배경으로 \"물가 등 거시경제의 안정을 도모...",
+    "publishedAt": 1787804778000
+   },
+   {
+    "title": "새마을금고 집단대출 취급 재개…중단 6개월만",
+    "url": "https://www.yna.co.kr/view/AKR20260827101500002",
+    "excerpt": "(서울=연합뉴스) 김지연 기자 = 새마을금고가 정부의 가계대출 규제로 약 반년간 막아놨던 집단대출을 27일 재개했다.",
+    "publishedAt": 1787803610000
+   },
+   {
+    "title": "내년 공직적격성평가 2·7월 실시…'차등 배점' 첫 도입",
+    "url": "https://www.yna.co.kr/view/AKR20260827097000001",
+    "excerpt": "(서울=연합뉴스) 이상현 기자 = 공직적격성평가(PSAT)가 내년 2월과 7월 실시되며 차등 배점제가 도입된다.",
+    "publishedAt": 1787801726000
+   },
+   {
+    "title": "기준금리 연속 인상에 주택 거래 더 위축…\"집값 하락은 제한적\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827094000003",
+    "excerpt": "(서울·세종=연합뉴스) 임기창 오진송 기자 = 한국은행이 두 달 연속 기준금리를 인상해 연 3.00%까지 끌어올리면서 주택 매수자들의 관망세가 ...",
+    "publishedAt": 1787799919000
+   },
+   {
+    "title": "한은 총재 \"연속 인상, 관례에서 벗어나…시장에 강한 시그널\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827096300002",
+    "excerpt": "(서울=연합뉴스) 박수현 이도흔 기자 = 신현송 한국은행 총재는 27일 연속적인 금리 인상 결정에 대해 \"관례에서 벗어난 조치였다\"라고 밝혔다.",
+    "publishedAt": 1787799747000
+   },
+   {
+    "title": "한은 총재 \"2분기 명목 GDP 상당히 높을 것…부채비율 등 개선\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827095600002",
+    "excerpt": "(서울=연합뉴스) 임지우 이도흔 기자 = 신현송 한국은행 총재는 27일 \"2분기 국내총소득(GDI) 성장률을 봤을 때 2분기 명목 국내총생산(G...",
+    "publishedAt": 1787799703000
+   },
+   {
+    "title": "\"고기 냄새 제거엔 스너글·엘지 아우라 제품 상대적 우수\"",
+    "url": "https://www.yna.co.kr/view/AKR20260826125000030",
+    "excerpt": "(서울=연합뉴스) 정수연 기자 = 한국소비자원은 섬유탈취제 8개 제품의 성능과 안전성, 가격을 시험·평가한 결과를 27일 발표했다.",
+    "publishedAt": 1787799646000
+   },
+   {
+    "title": "올해 벼 재배면적 67만㏊ '역대 최소'…쌀 수급 조절 정책 영향",
+    "url": "https://www.yna.co.kr/view/AKR20260827038500002",
+    "excerpt": "(세종=연합뉴스) 김수현 기자 = 정부의 쌀 수급 균형 정책 등의 영향으로 벼 재배 면적이 역대 최소치로 줄었다.",
+    "publishedAt": 1787799642000
+   },
+   {
+    "title": "근로·자녀장려금, 270만가구에 평균 106만원 오늘 조기지급",
+    "url": "https://www.yna.co.kr/view/AKR20260827042000002",
+    "excerpt": "(세종=연합뉴스) 이대희 기자 = 국세청은 2025년 귀속 정기분 근로·자녀장려금을 27일 지급한다고 밝혔다. 법정 기한인 10월 1일보다 한 ...",
+    "publishedAt": 1787799641000
+   },
+   {
+    "title": "상반기 창업기업 1.5% 감소…기술 기반 창업은 14.2% 증가",
+    "url": "https://www.yna.co.kr/view/AKR20260827068800030",
+    "excerpt": "(서울=연합뉴스) 구정모 기자 = 올해 상반기 전체 창업기업 수가 도소매업과 운수·창고업 등의 부진으로 지난해 같은 기간보다 1.5% 감소했지만...",
+    "publishedAt": 1787799611000
+   },
+   {
+    "title": "유가지원금 등에 소비 5년반 연속 증가…물가 감안하면 제자리",
+    "url": "https://www.yna.co.kr/view/AKR20260827074100002",
+    "excerpt": "(세종=연합뉴스) 이대희 송정은 기자 = 올해 2분기 고유가 피해지원금과 가전환급 행사 등에 힘입어 가구 소비지출이 22분기 연속 증가세를 이어...",
+    "publishedAt": 1787799610000
+   },
+   {
+    "title": "올해 벼 재배면적 67만ha로 줄어…쌀 생산량도 감소 전망",
+    "url": "https://www.yna.co.kr/view/AKR20260827072400030",
+    "excerpt": "(서울=연합뉴스) 한주홍 기자 = 올해 벼 재배면적이 지난해보다 7천500ha(헥타르·1 헥타르는 1만㎡) 줄어든 67만ha로 집계됐다. 전년보...",
+    "publishedAt": 1787799610000
+   },
+   {
+    "title": "정부, 글로벌 투자자 상대 韓외환·자본시장 제도개선 홍보",
+    "url": "https://www.yna.co.kr/view/AKR20260827076500002",
+    "excerpt": "(세종=연합뉴스) 이세원 기자 = 문지성 재정경제부 국제경제관리관(차관보)은 정부와 글로벌 투자자의 정례 소통 채널인 '글로벌 핵심 투자자 협의...",
+    "publishedAt": 1787799609000
+   },
+   {
+    "title": "물가 못 따라가는 월급…근로자 실질임금 석달 연속 감소",
+    "url": "https://www.yna.co.kr/view/AKR20260827080700530",
+    "excerpt": "(서울=연합뉴스) 옥성구 기자 = 물가 상승세가 임금 상승세를 웃돌면서 근로자 실질임금이 석 달 연속 감소한 것으로 나타났다.",
+    "publishedAt": 1787799608000
+   },
+   {
+    "title": "2분기 실질소득 1.5%↑…근로소득 줄고, 지원금 등은 16.9% 늘어",
+    "url": "https://www.yna.co.kr/view/AKR20260827087800002",
+    "excerpt": "(세종=연합뉴스) 송정은 기자 = 올해 2분기(4∼6월) 물가 상승 영향을 제거한 실질소득이 1.5% 늘었다.",
+    "publishedAt": 1787799600000
+   },
+   {
+    "title": "[속보] 한은 총재 \"GDP갭률 플러스 전환 임박…내년서 앞당겨져\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827095800002",
+    "excerpt": "(",
+    "publishedAt": 1787799576000
+   },
+   {
+    "title": "농식품부 \"CPTPP 가입시 농업계 영향 우려…피해 평가절하 안돼\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827094200030",
+    "excerpt": "(서울=연합뉴스) 김세린 기자 = 농림축산식품부는 27일 포괄적·점진적 환태평양경제동반자협정(CPTPP) 가입과 관련, \"가입 시 농업 분야에 ...",
+    "publishedAt": 1787799480000
+   },
+   {
+    "title": "한은 총재 \"환율 아직 높아…원화 좀 더 강해져야 바람직\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827094900002",
+    "excerpt": "(서울=연합뉴스) 박수현 이도흔 기자 = 신현송 한국은행 총재는 27일 \"환율은 역사적으로 봤을 때 아직도 높은 수준\"이라고 밝혔다.",
+    "publishedAt": 1787799414000
+   },
+   {
+    "title": "[속보] 한은 총재 \"연속 인상, 관례에서 벗어나…시장에 강한 시그널\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827094700002",
+    "excerpt": "(",
+    "publishedAt": 1787799316000
+   },
+   {
+    "title": "[속보] 한은 총재 \"명목GDP·물가·기업심리지수 보고 10월 금리 결정\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827094500002",
+    "excerpt": "(",
+    "publishedAt": 1787799205000
+   },
+   {
+    "title": "日은행 부총재 \"계속 정책금리 금리 인상해 금융완화 수준 조정\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827092700009",
+    "excerpt": "(서울=연합뉴스) 김병규 기자 = 일본 중앙은행인 일본은행의 히미노 료조 부총재가 계속 정책금리를 인상할 방침을 강조했다.",
+    "publishedAt": 1787798952000
+   },
+   {
+    "title": "한은 총재 \"금리 특효약 아냐…거시건전성 정책과 상호보완적\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827093400002",
+    "excerpt": "(서울=연합뉴스) 박수현 이도흔 기자 = 신현송 한국은행 총재는 27일 기준금리 인상 결정을 두고 \"통화정책과 거시건전성 정책은 상호보완적\"이라...",
+    "publishedAt": 1787798934000
+   },
+   {
+    "title": "한은 총재 \"향후 6개월, 완만한 금리 인상 예상\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827093200002",
+    "excerpt": "(서울=연합뉴스) 임지우 이도흔 기자 = 신현송 한국은행 총재는 향후 6개월 기준금리 전망과 관련해서 \"완만한 인상세를 예상한다\"고 말했다.",
+    "publishedAt": 1787798891000
+   },
+   {
+    "title": "[속보] 한은 총재 \"환율 아직 높아…원화 좀 더 강해져야 바람직\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827093300002",
+    "excerpt": "(",
+    "publishedAt": 1787798864000
+   },
+   {
+    "title": "[속보] 한은 총재 \"재정, 잠재성장률 올리면 통화정책과 엇박자 아냐\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827092800002",
+    "excerpt": "(",
+    "publishedAt": 1787798758000
+   },
+   {
+    "title": "토스, 외국인 유학생에 선불카드…계좌 없이 온오프라인 결제",
+    "url": "https://www.yna.co.kr/view/AKR20260827092000017",
+    "excerpt": "(서울=연합뉴스) 한상용 기자 = 토스 운영사 비바리퍼블리카는 외국인 유학생의 초기 금융 생활을 지원하기 위해 전국 15개 대학 국제처를 통해 ...",
+    "publishedAt": 1787798700000
+   },
+   {
+    "title": "[속보] 한은 총재 \"2분기 명목GDP, 상당히 높을 것…부채비율 등 개선\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827092500002",
+    "excerpt": "(",
+    "publishedAt": 1787798665000
+   },
+   {
+    "title": "국고채 금리 대체로 상승…3년물 장중 연 3.810%",
+    "url": "https://www.yna.co.kr/view/AKR20260827091400008",
+    "excerpt": "(서울=연합뉴스) 27일 국고채 금리가 대체로 상승하고 있다.",
+    "publishedAt": 1787798652000
+   },
+   {
+    "title": "[영천소식] 주거 취약계층 주택 중개보수 최대 30만원 지원",
+    "url": "https://www.yna.co.kr/view/AKR20260827088600053",
+    "excerpt": "(영천=연합뉴스) 경북 영천시는 주거 취약계층의 주택 중개보수를 최대 30만원 지원한다고 27일 밝혔다.",
+    "publishedAt": 1787798645000
+   },
+   {
+    "title": "[속보] 한은 총재 \"향후 6개월, 완만한 금리 인상 예상\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827091500002",
+    "excerpt": "(",
+    "publishedAt": 1787798485000
+   },
+   {
+    "title": "[속보] 한은 총재 \"통화정책, 거시건전성 정책과 상호 보완적\"",
+    "url": "https://www.yna.co.kr/view/AKR20260827091300002",
+    "excerpt": "(",
+    "publishedAt": 1787798380000
+   },
+   {
+    "title": "LH, 양주회천 A-26블록 공공분양주택 792가구 입주자 모집",
+    "url": "https://www.yna.co.kr/view/AKR20260827088400003",
+    "excerpt": "(서울=연합뉴스) 임기창 기자 = 한국토지주택공사(LH)는 경기 양주회천 A-26블록 공공분양주택 792가구 입주자 모집공고를 시행한다고 27일...",
+    "publishedAt": 1787798306000
+   }
+  ]
+ }
+}
