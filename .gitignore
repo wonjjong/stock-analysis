@@ -61,3 +61,6 @@ media/
 # (README 데이터 수집 원칙과 같은 이유). 재생성:
 #   node scripts/harvest-parity.mjs --live
 /tests/parity/pages/
+
+# Python 패키지 빌드 산출물
+*.egg-info/
