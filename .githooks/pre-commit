@@ -43,11 +43,16 @@ patterns=(
   'Private key 블록|-----BEGIN [A-Z ]*PRIVATE KEY-----'
 )
 
+# 로컬 개발 기본값은 비밀이 아니다. `postgresql://postgres:postgres@localhost:55432/...`
+# 같은 문자열이 걸리면 훅 자체를 끄게 되므로, 루프백 호스트를 향한 접속 문자열은
+# 통과시킨다. 실제 호스트를 향한 것은 아래 3번이 따로 경고한다.
+LOCAL_DB='postgres(ql)?://[^@ ]*@(localhost|127\.0\.0\.1|\[::1\]|postgres)[:/ ]'
+
 for entry in "${patterns[@]}"; do
   name="${entry%%|*}"; regex="${entry#*|}"
   # .env.example 과 이 훅 자신은 검사 대상에서 뺀다(플레이스홀더·패턴 정의가 걸린다).
   hits=$(git diff --cached -U0 -- . ':(exclude).env.example' ':(exclude).githooks/pre-commit' \
-         | grep -E '^\+' | grep -nEI -e "$regex" || true)
+         | grep -E '^\+' | grep -nEI -e "$regex" | grep -vE -e "$LOCAL_DB" || true)
   if [ -n "$hits" ]; then
     red "✖ $name 로 보이는 값이 스테이징되었습니다:"
     echo "$hits" | head -3 | sed 's/^/    /'
