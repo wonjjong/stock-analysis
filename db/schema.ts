@@ -7,6 +7,7 @@ export const newsSources = sqliteTable("news_sources", {
   resolvedUrl: text("resolved_url"),
   symbol: text("symbol").notNull(),
   company: text("company").notNull(),
+  category: text("category").notNull().default("종합"),
   crawlHourKst: integer("crawl_hour_kst").notNull().default(6),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   etag: text("etag"),
@@ -30,6 +31,7 @@ export const newsArticles = sqliteTable("news_articles", {
   canonicalUrl: text("canonical_url").notNull(),
   excerpt: text("excerpt").notNull().default(""),
   publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+  publishedDateKst: text("published_date_kst").notNull().default(""),
   contentHash: text("content_hash").notNull(),
   sentiment: text("sentiment").notNull(),
   sentimentScore: integer("sentiment_score").notNull(),
@@ -41,7 +43,7 @@ export const newsArticles = sqliteTable("news_articles", {
   collectedAt: integer("collected_at", { mode: "timestamp_ms" }).notNull(),
 }, (table) => [
   uniqueIndex("news_articles_canonical_url_unique").on(table.canonicalUrl),
-  index("news_articles_symbol_published_idx").on(table.symbol, table.publishedAt),
+  index("news_articles_published_date_idx").on(table.publishedDateKst, table.publishedAt),
   index("news_articles_source_collected_idx").on(table.sourceId, table.collectedAt),
 ]);
 

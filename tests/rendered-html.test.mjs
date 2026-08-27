@@ -40,7 +40,7 @@ test("뉴스 자동 수집 관리 화면을 서버 렌더링한다", async () =>
   const response = await render("/news/sources");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /AUTOMATED NEWS PIPELINE/);
-  assert.match(html, /등록하고 지금 첫 수집/);
-  assert.match(html, /최근 저장·분석된 기사/);
+  assert.match(html, /DAILY NEWS SCRAPER/);
+  assert.match(html, /등록하고 오늘 기사 수집/);
+  assert.match(html, /저장 기사/);
 });
