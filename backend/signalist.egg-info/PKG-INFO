@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: signalist
+Version: 0.1.0
+Requires-Python: >=3.12
+Requires-Dist: django<6,>=5.2
+Requires-Dist: psycopg[binary]<4,>=3.2
+Requires-Dist: httpx<1,>=0.28
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8.3; extra == "dev"
+Requires-Dist: pytest-django<5,>=4.9; extra == "dev"
+Requires-Dist: ruff<1,>=0.8; extra == "dev"

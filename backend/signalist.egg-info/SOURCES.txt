@@ -1,0 +1,6 @@
+pyproject.toml
+signalist.egg-info/PKG-INFO
+signalist.egg-info/SOURCES.txt
+signalist.egg-info/dependency_links.txt
+signalist.egg-info/requires.txt
+signalist.egg-info/top_level.txt
