@@ -35,3 +35,12 @@ test("뉴스 분석실을 서버 렌더링한다", async () => {
   assert.match(html, /뉴스 분석하기/);
   assert.match(html, /추천점수 조정/);
 });
+
+test("뉴스 자동 수집 관리 화면을 서버 렌더링한다", async () => {
+  const response = await render("/news/sources");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /AUTOMATED NEWS PIPELINE/);
+  assert.match(html, /등록하고 지금 첫 수집/);
+  assert.match(html, /최근 저장·분석된 기사/);
+});

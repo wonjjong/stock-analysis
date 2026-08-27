@@ -16,11 +16,11 @@ export type NewsAnalysis = {
   engine: "AI" | "규칙 기반 데모";
 };
 
-const positive = ["증가", "성장", "확대", "상향", "수주", "흑자", "개선", "회복", "호조", "승인", "돌파", "협력", "투자"];
-const negative = ["감소", "하락", "축소", "하향", "적자", "부진", "지연", "규제", "소송", "리콜", "중단", "해킹", "우려"];
-const material = ["실적", "매출", "영업이익", "순이익", "가이던스", "수주", "계약", "인수", "합병", "유상증자", "배당", "자사주", "규제", "소송"];
+const positive = ["증가", "성장", "확대", "상향", "수주", "흑자", "개선", "회복", "호조", "승인", "돌파", "협력", "투자", "growth", "raise", "raised", "beat", "beats", "surge", "record", "improve", "approval", "contract"];
+const negative = ["감소", "하락", "축소", "하향", "적자", "부진", "지연", "규제", "소송", "리콜", "중단", "해킹", "우려", "decline", "cut", "miss", "delay", "lawsuit", "recall", "probe", "warning", "risk", "sliding"];
+const material = ["실적", "매출", "영업이익", "순이익", "가이던스", "수주", "계약", "인수", "합병", "유상증자", "배당", "자사주", "규제", "소송", "earnings", "revenue", "profit", "guidance", "forecast", "acquisition", "merger", "dividend", "buyback"];
 
-function count(text: string, words: string[]) { return words.reduce((sum, word) => sum + (text.includes(word) ? 1 : 0), 0); }
+function count(text: string, words: string[]) { const normalized = text.toLowerCase(); return words.reduce((sum, word) => sum + (normalized.includes(word.toLowerCase()) ? 1 : 0), 0); }
 function clamp(value: number, min = 0, max = 100) { return Math.max(min, Math.min(max, value)); }
 
 export function analyzeNewsLocally(text: string, symbol: string, company: string): NewsAnalysis {
@@ -32,7 +32,8 @@ export function analyzeNewsLocally(text: string, symbol: string, company: string
   const explicit = compact.toLowerCase().includes(symbol.toLowerCase()) || compact.includes(company);
   const relevance = clamp((explicit ? 76 : 48) + Math.min(important * 5, 19));
   const materiality = important >= 3 ? "높음" : important >= 1 ? "보통" : "낮음";
-  const eventType = compact.includes("실적") || compact.includes("매출") ? "실적·가이던스" : compact.includes("수주") || compact.includes("계약") ? "수주·사업계약" : compact.includes("규제") || compact.includes("소송") ? "규제·법률" : compact.includes("투자") || compact.includes("협력") ? "투자·파트너십" : "산업·시장동향";
+  const lower = compact.toLowerCase();
+  const eventType = compact.includes("실적") || compact.includes("매출") || /earnings|revenue|guidance|forecast/.test(lower) ? "실적·가이던스" : compact.includes("수주") || compact.includes("계약") || /contract|order/.test(lower) ? "수주·사업계약" : compact.includes("규제") || compact.includes("소송") || /regulation|lawsuit|probe/.test(lower) ? "규제·법률" : compact.includes("투자") || compact.includes("협력") || /investment|partnership/.test(lower) ? "투자·파트너십" : "산업·시장동향";
   const impactHorizon = eventType === "실적·가이던스" ? "중기(1~2분기)" : eventType === "수주·사업계약" ? "장기(1년+)" : materiality === "낮음" ? "당일" : "단기(1~4주)";
   const scoreAdjustment = Math.round(clamp(raw * (materiality === "높음" ? 2.4 : materiality === "보통" ? 1.5 : .7), -8, 8));
   const sentences = compact.split(/(?<=[.!?。]|다\.)\s+/).filter((item) => item.length > 18);

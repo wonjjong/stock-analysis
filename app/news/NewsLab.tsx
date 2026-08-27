@@ -32,7 +32,7 @@ export function NewsLab() {
   }
 
   return <div className="app-shell"><Navigation/><main className="main-area">
-    <header className="topbar"><div className="mobile-brand"><span className="brand-mark">S</span><strong>signalist</strong></div><div className="live-pill"><i className="pulse-dot"/> NEWS INTELLIGENCE</div><div className="top-actions"><Link className="secondary-button" href={`/stock/${symbol}`}>{stock.name} 리서치</Link></div></header>
+    <header className="topbar"><div className="mobile-brand"><span className="brand-mark">S</span><strong>signalist</strong></div><div className="live-pill"><i className="pulse-dot"/> NEWS INTELLIGENCE</div><div className="top-actions"><Link className="secondary-button" href="/news/sources">URL 자동 수집</Link><Link className="secondary-button" href={`/stock/${symbol}`}>{stock.name} 리서치</Link></div></header>
     <div className="content news-content">
       <section className="news-hero"><div><p className="eyebrow">NEWS ANALYSIS LAB</p><h1>헤드라인 너머의<br/><span>실제 영향을 판독합니다.</span></h1><p>단순 긍·부정을 넘어 종목 관련성, 실적 중요도, 반영 기간과 추천점수 조정 범위를 함께 계산합니다.</p></div><div className="news-method"><span>분석 원칙</span><ol><li><b>01</b> 사실과 해석 분리</li><li><b>02</b> 중복 기사보다 사건 중심</li><li><b>03</b> 점수 반영은 ±8점 이내</li></ol></div></section>
       <div className="news-workspace">
@@ -44,7 +44,7 @@ export function NewsLab() {
           <div className="sample-actions"><span>샘플 불러오기</span><button type="button" onClick={()=>{setText(samples.positive);setResult(null);}}>긍정 뉴스</button><button type="button" onClick={()=>{setText(samples.negative);setResult(null);}}>부정 뉴스</button></div>
           {error && <p className="form-error">{error}</p>}
           <button className="primary-button analyze-button" disabled={loading || text.trim().length<40}>{loading ? "뉴스 근거 판독 중…" : "뉴스 분석하기 →"}</button>
-          <p className="input-note">URL은 출처 기록용입니다. 현재 버전은 저작권과 크롤링 약관 문제를 피하기 위해 사용자가 붙여넣은 본문을 분석합니다.</p>
+          <p className="input-note">이 화면은 단일 기사를 직접 분석합니다. 매일 자동 수집하려면 상단의 ‘URL 자동 수집’에서 RSS 또는 뉴스 목록 URL을 등록하세요.</p>
         </form>
 
         <section className="news-result-panel" aria-live="polite">
