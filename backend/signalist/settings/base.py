@@ -1,9 +1,8 @@
 """
 공통 설정. 환경별 파일(dev / prod / test)이 이 모듈을 확장한다.
 
-DB는 TypeScript 쪽과 **같은 PostgreSQL**을 가리킨다. 이식이 끝날 때까지 스키마 소유자는
-drizzle(`db/schema.ts`)이므로, Django 모델은 `managed = False`로 두어 마이그레이션이
-테이블을 만들거나 바꾸지 않게 한다.
+스키마 소유자는 Django 마이그레이션이다. 이식 중에는 drizzle 이 소유했고 모델이
+`managed = False` 였다 — 자세한 경위는 `news/models.py` 참고.
 """
 
 import os
@@ -11,7 +10,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# 저장소 루트. .env 와 tests/parity/ 가 여기에 있다.
+# 저장소 루트. .env 가 여기에 있다.
 REPO_ROOT = BASE_DIR.parent
 
 
@@ -44,13 +43,13 @@ DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 
 INSTALLED_APPS = [
-    # Admin 이 운영 조회 화면이고 인증이 그 전제다. auth 가 소유하는 테이블
-    # (auth_user 등)은 Django 마이그레이션이 만든다 — drizzle 과 겹치지 않는다.
+    # Admin 이 운영 조회 화면이고 인증이 그 전제다.
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.postgres",  # GinIndex 등 Postgres 전용 기능
     "django.contrib.staticfiles",
     "news",
 ]

@@ -1,1 +1,0 @@
-"""Deterministic finance domain logic."""

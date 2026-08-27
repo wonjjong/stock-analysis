@@ -4,13 +4,14 @@
 
 **현재 실제로 동작하는 것은 뉴스 파이프라인입니다.** 뉴스 사이트를 등록하면 주기적으로 기사를
 수집하고, 본문을 읽어 요약·키워드·감성·영향 업종을 뽑고, 종목 사전으로 언급된 종목을 연결합니다.
-리서치 엔진(팩터 랭킹·백테스트)은 화면만 있고 `app/data.ts`의 하드코딩 데이터를 보여줍니다.
+리서치 엔진(팩터 랭킹·백테스트)은 아직 없습니다.
 
-- `/news` — 종목과 기사 본문을 붙여넣어 관련성·감성·중요도·영향 기간·근거·추천점수 조정치 확인
+- `/` — 파이프라인 상태 한 화면: 소스, 분석 큐, 공급자, 최근 실행, 많이 언급된 종목
 - `/news/sources` — 뉴스 사이트 등록, 수집 시각·목록 페이지 수·수집 창 관리
-- `/news/archive` — 수집한 기사를 기간·소스·종목·감성·키워드로 검색. 행을 펼치면 요약·키워드·태깅 종목·시장 관점·근거
-- `/news/providers` — LLM 공급자 등록, 우선순위·일일 한도·쿨다운
-- `/`, `/stock/[symbol]`, `/portfolio` — 리서치 화면 (아직 mock 데이터)
+- `/news/archive` — 수집한 기사를 기간·소스·종목·감성으로 검색. 행을 펼치면 요약·키워드·태깅 종목·시장 관점·근거
+- `/news/providers` — AI 공급자 등록, 우선순위·일일 한도·쿨다운
+- `/news/lab` — 기사를 붙여넣어 규칙 엔진과 AI가 무엇을 뽑는지 확인 (저장하지 않음)
+- `/admin/` — 운영 조회: 크롤 실패 원인, 큐 적체, 공급자 사용량
 
 ---
 
@@ -18,12 +19,12 @@
 
 - [실행](#실행)
 - [아키텍처](#아키텍처)
-- [프론트엔드 구조](#프론트엔드-구조) ← Next.js가 처음이면 여기부터
+- [코드 구조](#코드-구조) ← 어디에 무엇이 있나
 - [데이터베이스](#데이터베이스)
 - [뉴스 수집](#뉴스-수집)
 - [본문 기반 분석 파이프라인](#본문-기반-분석-파이프라인)
 - [AI 공급자 우선순위와 폴백](#ai-공급자-우선순위와-폴백)
-- [API](#api)
+- [TypeScript 에서 Python 으로](#typescript-에서-python-으로)
 - [테스트](#테스트)
 - [주의할 함정](#주의할-함정)
 - [추천 모델 교정 내용](#추천-모델-교정-내용)
@@ -36,12 +37,14 @@
 ## 실행
 
 ```bash
-docker compose up -d          # PostgreSQL 16 (호스트 포트 55432)
-npm install
-cp .env.example .env
-npm run db:migrate            # 스키마 적용
-npm run dev                   # http://localhost:3000
-npm run scheduler             # 별 터미널 — 주기 수집·본문 분석
+docker compose up -d                      # PostgreSQL 16 (호스트 포트 55432)
+cd backend
+python3.13 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+cp ../.env.example ../.env
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py createsuperuser
+.venv/bin/python manage.py runserver      # http://localhost:8000
+.venv/bin/python manage.py run_scheduler  # 별 터미널 — 주기 수집·본문 분석
 ```
 
 `DATABASE_URL`은 `.env`에 둡니다. 기본값은 compose가 노출하는
@@ -49,14 +52,14 @@ npm run scheduler             # 별 터미널 — 주기 수집·본문 분석
 
 | 명령 | 내용 |
 |---|---|
-| `npm run dev` / `build` / `start` | Next.js 개발·빌드·프로덕션 |
-| `npm run scheduler` | 주기 수집 + 본문 분석 (기본 60초 tick) |
-| `npm run scheduler:once` | 단발 실행 — 외부 cron이나 CI에서 |
-| `npm run db:generate` | `db/schema.ts` 변경 → 마이그레이션 SQL 생성 |
-| `npm run db:migrate` | 마이그레이션 적용 |
-| `npm test` | 빌드 + 전체 테스트 39개 |
-| `npm run test:unit` | 빌드 없이 파서·분석 단위 테스트 34개 |
-| `npm run lint` | ESLint |
+| `manage.py runserver` | 개발 서버 |
+| `manage.py run_scheduler [--interval N] [--batch N] [--once]` | 주기 수집 + 본문 분석 |
+| `manage.py crawl_news [--source N] [--limit N]` | 기한이 된 소스 수집 |
+| `manage.py analyze_news [--limit N] [--stats]` | 본문 분석 / 큐 현황 |
+| `manage.py migrate` · `makemigrations` | 스키마 |
+| `manage.py createsuperuser` | Admin 계정 |
+| `.venv/bin/python -m pytest` | 테스트 96개 |
+| `.venv/bin/ruff check .` | 린트 |
 
 ### 환경변수
 
@@ -64,34 +67,35 @@ npm run scheduler             # 별 터미널 — 주기 수집·본문 분석
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL 접속 문자열 |
 | `DATABASE_POOL_MAX` | | 커넥션 풀 상한 (기본 10) |
-| `NEXT_PUBLIC_SITE_URL` | | OG·트위터 이미지 절대 URL 기준 |
-| `TICK_SECONDS` | | 스케줄러 확인 주기 (기본 60) |
-| `INSIGHT_BATCH` | | tick당 본문 분석 건수 (기본 20) |
+| `DJANGO_SECRET_KEY` | 배포시 ✅ | prod 설정에서 필수 |
+| `DJANGO_ALLOWED_HOSTS` | 배포시 | 콤마 구분 |
 | `SIGNALIST_LLM_*` | | 공급자를 DB에 등록하지 않았을 때의 마지막 수단 |
-| `SIGNALIST_OPENAI_*` | | `/api/news/analyze`의 구조화 출력 |
+| `SIGNALIST_OPENAI_*` | | 레거시 폴백 키 |
 
 ---
 
 ## 아키텍처
 
-프로세스가 **셋**입니다. 웹 서버, 스케줄러, 데이터베이스.
+프로세스가 **셋**입니다. Django 웹 서버, 스케줄러, 데이터베이스. Node 는 쓰지 않습니다.
 
 ```
                         브라우저
                            │
         ┌──────────────────▼───────────────────┐
-        │  Next.js 16 (App Router) — Node       │
+        │  Django 5.2 — 템플릿 + Admin          │
         │                                       │
-        │   app/**/page.tsx     화면            │
-        │   app/api/**/route.ts REST 엔드포인트 │
-        │   app/lib/**          크롤러·분석 로직 │
+        │   news/views.py       화면            │
+        │   news/admin.py       운영 조회        │
+        │   news/crawler/**     순수 파싱 로직   │
+        │   news/services/**    DB·네트워크      │
         └──────────────────┬───────────────────┘
                            │
         ┌──────────────────▼───────────────────┐
-        │  scripts/scheduler.mjs — Node         │
+        │  manage.py run_scheduler              │
         │                                       │
-        │   crawlDueSources()       기한 된 소스│
-        │   processPendingInsights()  본문 분석 │
+        │   crawl_due_sources()     기한 된 소스│
+        │   process_pending_insights() 본문 분석│
+        │   reap_stuck_runs()       멈춘 실행 정리│
         └──────────────────┬───────────────────┘
                            │ DATABASE_URL
                   ┌────────▼──────────────┐
@@ -110,7 +114,7 @@ npm run scheduler             # 별 터미널 — 주기 수집·본문 분석
               └───────────────────────────┘
 ```
 
-웹 서버와 스케줄러는 **같은 코드**(`app/lib/*`)를 공유하고 DB를 통해서만 만납니다. 스케줄러가
+웹 서버와 스케줄러는 **같은 코드**(`news/crawler/*`, `news/services/*`)를 공유하고 DB를 통해서만 만납니다. 스케줄러가
 죽어도 웹은 살아 있고, `/news/sources`의 "지금 수집" 버튼으로 수동 실행이 가능합니다.
 
 ### 왜 이 구성인가 (히스토리)
@@ -126,113 +130,92 @@ npm run scheduler             # 별 터미널 — 주기 수집·본문 분석
 |---|---|---|
 | Cloudflare Workers | Node 프로세스 | `pg`가 Node TCP 소켓을 요구 — workerd에는 `node:net`이 없어 **선택이 아니라 강제** |
 | Cloudflare D1 (SQLite) | PostgreSQL 16 | 윈도 함수·`numeric`·파티셔닝·`DISTINCT ON` 없이는 팩터 계산이 불가 |
-| Worker cron 트리거 | `scripts/scheduler.mjs` | Worker는 상시 프로세스가 없어 플랫폼이 깨워 줬음 |
-| `vinext` 1.0.0-beta.2 | Next.js 16 | Cloudflare를 떠나면 존재 이유가 없고, 공식 문서가 그대로 적용됨 |
-| ChatGPT 앱 헤더 인증 | 없음 | 플랫폼을 떠나면 `oai-authenticated-user-*` 헤더 자체가 사라짐 |
+| `vinext` → Next.js 16 → 삭제 | Django 템플릿 | Cloudflare를 떠나자 vinext는 존재 이유가 없고, Python으로 통일하면서 React도 걷어냄 |
+| Worker cron 트리거 | `manage.py run_scheduler` | Worker는 상시 프로세스가 없어 플랫폼이 깨워 줬음 |
+| ChatGPT 앱 헤더 인증 | `django.contrib.auth` | 플랫폼을 떠나면 `oai-authenticated-user-*` 헤더 자체가 사라짐 |
+| TypeScript 전체 (~2,000줄) | Python | 언어와 프로세스를 하나로. 자세한 근거는 [이식 기록](#typescript-에서-python-으로) |
 
 ---
 
-## 프론트엔드 구조
-
-백엔드 배경이라면 여기가 가장 낯선 부분입니다. Spring MVC 개념으로 대응시켜 설명합니다.
-
-### 층
+## 코드 구조
 
 ```
-React      화면 그리는 라이브러리   ← 템플릿 엔진 자리
-Next.js    웹 프레임워크            ← Spring MVC 자리
-Node       런타임                   ← JVM 자리
+backend/
+  signalist/settings/{base,dev,prod,test}.py   설정
+  news/
+    crawler/          순수 함수. Django 를 import 하지 않는다
+      dates.py        발행시각 판독 — 가장 위험한 부분
+      jsurl.py        URL 정규화 — canonical_url 계약
+      html.py         JSON-LD · 앵커 오프셋 윈도 · 페이지네이션
+      feed.py         RSS · Atom
+      robots.py       robots.txt 판정
+      fetcher.py      전체 데드라인 · SSRF · 크기 제한
+      body.py         기사 본문 추출
+      analysis.py     규칙 기반 감성
+      keywords.py     조사 제거 키워드
+      symbols.py      종목 매칭 + symbol_data.py(기계 생성 120개)
+      insights.py     인사이트 조립과 검증
+      llm.py          OpenAI 호환 어댑터 · 실패 분류 · 쿨다운
+      window.py       수집 창
+      schedule.py     다음 실행 시각
+    services/         DB · 네트워크를 만지는 층
+      ingest.py       수집 오케스트레이션
+      insights.py     본문 분석 큐
+      llm.py          공급자 페일오버
+    models.py         6개 모델
+    views.py forms.py 화면
+    admin.py          운영 조회
+    templates/news/   HTML
+    management/commands/  crawl_news · analyze_news · run_scheduler
+    tests/            테스트 96개 + 정답지
 ```
 
-### 파일 경로가 곧 URL
+### `crawler/` 와 `services/` 를 나눈 이유
 
-어노테이션이 없습니다. **폴더 위치가 라우팅입니다.**
+`crawler/` 는 **Django 를 import 하지 않습니다.** 순수 함수만 있고 DB·네트워크는
+`services/` 가 담당합니다.
 
-| 파일 | URL | Spring 대응 |
-|---|---|---|
-| `app/page.tsx` | `/` | `@GetMapping("/")` + 뷰 |
-| `app/news/sources/page.tsx` | `/news/sources` | `@GetMapping("/news/sources")` |
-| `app/stock/[symbol]/page.tsx` | `/stock/005930` | `@GetMapping("/stock/{symbol}")` |
-| `app/api/news/sources/route.ts` | `/api/news/sources` | `@RestController` |
+덕분에 파싱 로직 테스트가 DB 없이 돌고(96개 중 대부분), 이식 동일성을 고정 입력으로
+증명할 수 있습니다. `fetcher.py` 와 `body.py` 만 `httpx` 를 쓰는데, 이들도 클라이언트를
+인자로 받아 호출부가 수명을 관리합니다 — prefork 워커에서 모듈 레벨로 공유하면 소켓이
+자식 간에 섞입니다.
 
-파일 이름이 규약입니다 — `page`는 화면, `route`는 JSON API, `layout`은 공통 껍데기.
-`app/layout.tsx`가 `<html>`·`<body>`·메타태그를 담당하며 Thymeleaf의 `layout:decorate` 자리입니다.
+### 화면 흐름은 Spring MVC 와 같습니다
 
-### 서버 컴포넌트 vs 클라이언트 컴포넌트
+뷰가 모델을 채워 템플릿에 넘깁니다. 이전 React 구조는 얇은 서버 껍데기가 HTML 을 내리고
+브라우저가 다시 `fetch` 로 데이터를 받는 **왕복 두 번**이었고, 그래서 첫 화면에
+"불러오는 중"이 보였습니다. 지금은 한 번입니다.
 
-Spring에 대응 개념이 없는 부분입니다. **`"use client"` 한 줄이 경계입니다.**
-
-- **없으면 서버**에서 실행 — HTML을 만들어 내려보냄. DB 직접 조회 가능, 브라우저에 코드 안 감
-- **있으면 브라우저**에서 실행 — 상태(`useState`)를 갖고 `fetch`로 API 호출
-
-이 프로젝트는 **얇은 서버 껍데기 + 두꺼운 클라이언트 화면** 구조입니다. 모든 라우트가 같은 모양:
-
-```tsx
-// app/news/sources/page.tsx — 5줄, 서버
-import { NewsSources } from "./NewsSources";
-export const metadata: Metadata = { title: "뉴스 자동 수집" };
-export default function NewsSourcesPage() { return <NewsSources />; }
-```
-
-```tsx
-// app/news/sources/NewsSources.tsx — 128줄, 브라우저
-"use client";
-import { useState, useEffect } from "react";
-```
-
-`page.tsx`가 5줄인 건 하는 일이 "제목 붙이고 클라이언트 컴포넌트 렌더" 뿐이기 때문입니다.
-
-### 데이터 흐름 — HTTP 왕복이 두 번
-
-```
-/news/sources 요청
-   ↓
-page.tsx (서버) → HTML 껍데기            ← 여기선 DB를 보지 않음
-   ↓
-브라우저에서 NewsSources.tsx 실행
-   ↓
-useEffect → fetch("/api/news/sources")   ← 이제서야 데이터 요청
-   ↓
-route.ts (서버) → getD1() → PostgreSQL
-   ↓
-JSON → useState 갱신 → 화면 다시 그림
-```
-
-Spring MVC에서 컨트롤러가 모델을 채워 템플릿에 넘기는 **한 번짜리** 흐름과 다릅니다. 그래서 첫
-화면에 "불러오는 중"이 잠깐 보입니다. Next.js는 서버 컴포넌트에서 DB를 직접 읽어 한 번에
-내려보낼 수도 있지만(그게 Spring 흐름에 더 가깝습니다) 이 프로젝트는 그렇게 하지 않습니다.
-
-### 파일별 역할
-
-| 파일 | 종류 | 역할 |
-|---|---|---|
-| `app/layout.tsx` | 서버 | `<html>`·메타태그·`globals.css` |
-| `app/page.tsx` → `Dashboard.tsx` | 클라이언트 | 추천 종목 대시보드 (mock) |
-| `app/news/page.tsx` → `NewsLab.tsx` | 클라이언트 | 기사 본문 즉석 분석 |
-| `app/news/sources/` → `NewsSources.tsx` | 클라이언트 | 소스 등록·관리 |
-| `app/news/archive/` → `NewsArchive.tsx` | 클라이언트 | 기사 검색·필터·페이지네이션 |
-| `app/news/providers/` → `NewsProviders.tsx` | 클라이언트 | LLM 공급자 관리 |
-| `app/portfolio/`, `app/stock/[symbol]/` | 클라이언트 | 보유종목·종목 상세 (mock) |
-| `app/components/Navigation.tsx` | 클라이언트 | 공통 내비게이션 |
-| `app/data.ts` | — | 하드코딩 mock 6종목. 리서치 엔진이 붙으면 삭제 |
+폼 검증은 파이프라인과 **같은 함수**를 씁니다 — `SourceForm.clean_url` 이
+`validate_source_url` 을 그대로 호출합니다. 다른 규칙을 쓰면 "등록은 되는데 수집이 안 되는
+소스"가 생깁니다.
 
 ---
 
 ## 데이터베이스
 
-PostgreSQL 16. 스키마는 `db/schema.ts`(drizzle)가 **단독 소유**하고 변경은 마이그레이션으로만
-합니다.
+PostgreSQL 16. 스키마 소유자는 **Django 마이그레이션**입니다.
 
 ```bash
-# db/schema.ts 수정 후
-npm run db:generate      # drizzle/000N_*.sql 생성
-npm run db:migrate       # 적용
+# news/models.py 수정 후
+.venv/bin/python manage.py makemigrations news
+.venv/bin/python manage.py migrate
 ```
 
-**생성된 SQL은 반드시 읽어보세요.** drizzle-kit이 놓치는 것이 있습니다 — `text → jsonb` 타입
-변경에서 `USING` 절과 `DROP DEFAULT`를 생성하지 않아 손으로 넣어야 했습니다
-(`drizzle/0002_same_fixer.sql` 주석 참고). SQLite 시절 마이그레이션은
-`docs/reference/drizzle-sqlite/`에 보존돼 있습니다(실행 금지).
+**생성된 SQL을 확인하는 습관을 두세요** — `manage.py sqlmigrate news 0001`.
+
+이식 중에는 drizzle 이 스키마를 소유하고 모델이 `managed = False` 였습니다. 소유권을
+넘길 때 다음을 확인했습니다.
+
+- 빈 DB 에 `migrate` 한 결과가 기존 DB 와 컬럼·타입·인덱스·제약까지 일치하는지
+- `--fake-initial` 이 거짓이 되지 않도록 PK 를 `AutoField`(integer)로 고정 — drizzle 의
+  `serial` 이 32비트이고 Django 기본값 `BigAutoField` 는 bigint 다
+- 인덱스 이름을 Django 규약으로 개명(0002) — Django 는 이름을 30자로 제한하고 drizzle
+  이름은 그보다 길었다
+- Django 가 만드는데 drizzle 은 만들지 않던 인덱스를 채움(0003) — FK 인덱스와
+  `text_pattern_ops`(LIKE 접두어 검색용)
+
+이전 마이그레이션은 `docs/reference/` 에 보존돼 있습니다(실행 금지).
 
 ### 테이블
 
@@ -293,8 +276,7 @@ types.setTypeParser(1082, (v) => v);              // date → 'YYYY-MM-DD' 문�
 
 ## 뉴스 수집
 
-`app/lib/news-crawler.ts` (646줄). 앞 ~500줄은 **DB를 전혀 모릅니다** — 순수 파싱 함수
-라이브러리이고, DB 접근은 `crawlSource`·`crawlDueSources`에만 있습니다.
+`news/crawler/` 의 순수 함수들이 파싱을, `news/services/ingest.py` 가 DB 쓰기를 담당합니다.
 
 `/news/sources`에 뉴스 사이트나 뉴스 목록 URL을 등록하면 그 자리에서 1회 수집하고, 이후
 스케줄러가 설정한 한국시간에 하루 한 번 실행합니다.
@@ -364,36 +346,71 @@ SIGNALIST_LLM_TIMEOUT_MS=25000 # 선택
 
 ---
 
-## API
+## TypeScript 에서 Python 으로
 
-전부 `app/api/**/route.ts`입니다.
+수집·분석 파이프라인 ~2,000줄을 이식했습니다. 이식 동일성(parity)을 먼저 증명하는 방식으로
+진행했습니다.
 
-| 메서드 · 경로 | 내용 |
+### 정답지 방식
+
+동결된 TypeScript 구현을 고정 입력에 돌려 출력을 JSON 으로 남기고
+(`news/tests/parity/expected.json`), Python 이 같은 입력에 같은 출력을 내는지 검사합니다.
+
+**왜 이렇게까지 하는가**: 모든 추출 경로가 날짜를 못 찾으면 기사를 조용히 버립니다. 이식판이
+조금이라도 덜 관대하면 예외 없이 기사 수만 줄고 `새 기사 없음` 으로 기록됩니다. 정상처럼
+보이므로 몇 주간 모릅니다.
+
+추론 사례 143개 + 실제 언론사 피드 120건. 마지막 것은 같은 90KB 바이트를 두 구현에 돌려
+**120건 × 4필드 = 480개 값 불일치 0개**를 확인한 것입니다.
+
+### 라이브러리를 쓰지 않은 곳과 이유
+
+| 후보 | 쓰지 않은 이유 |
 |---|---|
-| `GET /api/news/sources` | 소스 목록 + 최근 48시간 기사. 소스별 누적·최근 기사 수와 실행 횟수 |
-| `POST /api/news/sources` | 소스 등록 후 **즉시 1회 수집**. 응답에 수집 결과 또는 경고 |
-| `PATCH /api/news/sources/[id]` | 활성 여부·수집 시각·페이지 수·수집 창 변경. 다음 실행 시각 재계산 |
-| `DELETE /api/news/sources/[id]` | 소스 삭제 (연결된 기사도 cascade) |
-| `POST /api/news/sources/[id]/crawl` | 지금 수집 |
-| `GET /api/news/articles` | 기사 검색. `from`·`to`·`source`·`sentiment`·`symbol`·`q`·`page`·`size`. 집계·소스 목록·상위 종목을 한 번에 반환 |
-| `POST /api/news/analyze` | 붙여넣은 기사 본문 즉석 분석 |
-| `GET`·`POST /api/news/insights` | 큐 통계 조회 / 배치 실행 |
-| `GET`·`POST /api/news/providers` | LLM 공급자 조회·등록 |
-| `PATCH`·`DELETE /api/news/providers/[id]` | 공급자 수정·삭제 |
-| `POST /api/news/providers/[id]/test` | 공급자 연결 테스트 |
+| `dateutil` | `Date.parse` 보다 관대해서, 원본이 일부러 없앤 "기사 번호와 스코어가 그럴듯한 타임스탬프로 둔갑" 버그를 되살립니다 |
+| `feedparser` | HTML 을 sanitize 해 excerpt 가 달라지고 기존 기사 전체의 `content_hash` 가 바뀝니다 |
+| `beautifulsoup4` | `anchor_context` 는 원시 HTML 을 문자 오프셋(±320)으로 잘라 문맥을 만듭니다. 파싱된 트리로는 표현할 수 없고, 바꾸면 다른 기사 집합이 되며 튜닝된 상수들이 무효가 됩니다 |
+| `trafilatura` | 이 크롤러는 목록 페이지만 읽습니다. 전문 추출 도구가 필요 없습니다 |
+| `urllib.robotparser` | 양방향 agent prefix 매치, 최장 패턴 승리, 빈 줄 그룹 리셋 등 네 가지 동작이 재현되지 않습니다. 30줄이라 그대로 이식했습니다 |
 
-> **인증이 없습니다.** 로컬 개발 전제입니다. 외부에 노출하기 전에 최소한 관리 기능
-> (`POST /sources`, `/crawl`, `/insights`, `/providers`)에 인증을 붙여야 합니다.
-> 이전에 인증 없이 전체 소스 크롤을 무한 트리거할 수 있는 `POST /api/news/crawl/due`가 있었고
-> 제거했습니다 — 외부 DoS 증폭기이자 등록된 언론사에 대한 공격 경로였습니다.
+### 이식하면서 잡은 함정
+
+- **`Date.UTC` 오버플로** — `2026-02-30` 이 `2026-03-02` 로 정규화됩니다. Python
+  `datetime` 은 예외를 던지므로 `datetime + timedelta` 누산으로 재현했습니다
+- **Python `\d` 는 유니코드** — 전각 숫자가 매치됩니다. 모든 숫자 패턴에 `re.ASCII`
+- **가변폭 lookbehind** — `(?<=[.!?。]|다\.)` 를 Python `re` 가 거부합니다. 고정폭 둘로
+  재구성했습니다
+- **`urljoin` 이 절대 URL 의 dot-segment 를 정규화하지 않습니다** — WHATWG 는 항상 합니다
+- **`urljoin` 이 빈 `?` 를 버립니다** — 원문에서 판정해야 합니다
+- **JS `str.replace(문자열)` 은 첫 번째만** 바꿉니다. Python 은 전부이므로 `count=1` 필수
+- **JS `Math.round` 는 `.5` 를 +∞ 로** 올립니다. Python `round()` 는 짝수로 붙입니다
+
+### 의도적으로 원본과 같게 둔 것
+
+- **인코딩** — `TextDecoder()` 가 charset 을 무시해 EUC-KR 사이트 제목이 mojibake 인 것도
+  그대로입니다. 고치면 `content_hash` 가 전부 바뀌므로 백필과 함께 별도로 해야 합니다
+- **SSRF 가드** — DNS 해석 결과 검사와 IPv6 범위 검사는 원본에 없는 추가 방어입니다.
+  넣으면 동일성 diff 를 해석할 수 없게 되므로 이식 후 별도 작업입니다
+
+### `article-body` 는 크롤러와 동작이 다릅니다
+
+같은 이름의 함수가 있지만 원본이 **의도적으로 별도 구현**을 뒀습니다. 재사용하면 조용히
+틀립니다.
+
+| | 크롤러 | 본문 추출 |
+|---|---|---|
+| 알 수 없는 named 엔티티 | `&entity;` 로 되돌림 | **공백**으로 바꿈 |
+| 크기 초과 | 예외 | **읽은 만큼만 쓰고 중단** |
+| robots 401·403·5xx | 예외 | **False 반환** |
+| 상한 | 2.5MB | 1.5MB |
 
 ---
 
 ## 테스트
 
 ```bash
-npm run test:unit   # 빌드 없이, 파서·분석 34개
-npm test            # 빌드 + SSR 렌더링까지 39개
+cd backend && .venv/bin/python -m pytest        # 96개
+.venv/bin/python -m pytest -k parity            # 이식 동일성만
 ```
 
 **파서 테스트**는 `tests/fixtures/`의 고정 픽스처(`news-feed.xml`, `news-list.html`)에 esbuild로

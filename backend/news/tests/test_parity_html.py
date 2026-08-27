@@ -9,12 +9,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from django.conf import settings
-
 from news.crawler.feed import looks_like_feed, parse_feed
 from news.crawler.html import find_next_page_url, parse_news_page
 
-FIXTURES = Path(settings.REPO_ROOT) / "tests" / "fixtures"
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 LIST_URL = "https://news.example.com/news"
 
 

@@ -1,1 +1,0 @@
-"""Signalist API package."""

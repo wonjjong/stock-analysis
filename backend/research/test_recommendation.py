@@ -1,4 +1,4 @@
-from app.domain.recommendation import Candidate, MacroRegime, rank_candidates
+from research.recommendation import Candidate, MacroRegime, rank_candidates
 
 
 def test_rank_is_deterministic_and_respects_limit():

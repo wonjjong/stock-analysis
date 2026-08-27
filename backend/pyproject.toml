@@ -27,7 +27,7 @@ dev = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "signalist.settings.test"
 pythonpath = ["."]
-testpaths = ["news", "signalist"]
+testpaths = ["news", "signalist", "research"]
 addopts = "-q --strict-markers"
 
 [tool.ruff]
@@ -48,3 +48,6 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 "news/crawler/symbol_data.py" = ["E501"]
 # Meta.ordering 등은 Django 규약이며 ClassVar 주석이 부자연스럽다.
 "news/models.py" = ["RUF012"]
+# 마이그레이션은 Django 가 생성하는 형식이다. 손으로 다듬으면 makemigrations 가
+# 다시 덮어쓰거나 diff 가 생긴다.
+"news/migrations/*" = ["RUF012", "E501"]

@@ -1,20 +1,28 @@
 """
-기존 PostgreSQL 테이블에 대응하는 모델.
+뉴스 파이프라인 모델.
 
-## 전부 `managed = False` 다
+## 스키마 소유자가 Django 로 넘어왔다
 
-스키마 소유자는 TypeScript 쪽 drizzle(`db/schema.ts` → `drizzle/*.sql`)이다. 이식이
-끝나고 TS 를 삭제할 때까지 Django 마이그레이션이 이 테이블을 만들거나 바꾸지 않는다.
-한 테이블에 두 소유자를 두면 서로의 변경을 되돌린다.
+이식 중에는 `managed = False` 로 두어 drizzle(`db/schema.ts`)이 스키마를 소유했다. 한
+테이블에 두 소유자를 두면 서로의 변경을 되돌리기 때문이다. TypeScript 를 삭제한 지금은
+Django 마이그레이션이 소유한다.
 
-TS 를 삭제하는 시점에 `managed = True` 로 바꾸고 `--fake-initial` 로 마이그레이션
-이력을 맞춘다.
+이전 이력은 `--fake-initial` 로 맞췄다 — 테이블이 이미 존재하므로 첫 마이그레이션은
+"이미 적용됨"으로 기록만 하고 DDL 을 실행하지 않는다. SQLite 시절과 Postgres 전환기의
+drizzle 마이그레이션은 `docs/reference/` 에 보존돼 있다.
 """
 
 from __future__ import annotations
 
+from django.contrib.postgres.indexes import GinIndex
 from django.db import connection, models
+from django.db.models.functions import Cast, Coalesce
 
+# drizzle 의 `serial` 은 32비트 integer 다. 프로젝트 기본값(BigAutoField)을 그대로 쓰면
+# 마이그레이션이 bigint 를 만들어 기존 DB 와 어긋나고, `--fake-initial` 이 실제와 다른
+# 스키마를 "적용됨"으로 기록해 거짓말이 된다. 기존 컬럼 타입에 맞춘다.
+#
+# 행 수가 21억에 근접하면 그때 bigint 로 올리는 별도 마이그레이션을 쓴다.
 
 class NewsArticleManager(models.Manager):
     """`insert_ignore` 를 제공한다."""
@@ -66,6 +74,7 @@ class CrawlStatus(models.TextChoices):
 
 
 class NewsSource(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.TextField()
     url = models.TextField(unique=True)
     resolved_url = models.TextField(null=True, blank=True)
@@ -86,17 +95,21 @@ class NewsSource(models.Model):
     updated_at = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = "news_sources"
         ordering = ["-is_active", "-created_at"]
         verbose_name = "뉴스 소스"
         verbose_name_plural = "뉴스 소스"
+        indexes = [
+            # 스케줄러의 "기한이 된 소스" 조회를 받친다.
+            models.Index(fields=["is_active", "next_crawl_at"], name="news_src_due_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.category})"
 
 
 class NewsArticle(models.Model):
+    id = models.AutoField(primary_key=True)
     source = models.ForeignKey(
         NewsSource, on_delete=models.CASCADE, db_column="source_id", related_name="articles"
     )
@@ -114,24 +127,57 @@ class NewsArticle(models.Model):
     score_adjustment = models.IntegerField()
     analysis_summary = models.TextField()
     collected_at = models.DateTimeField()
-    # DB 생성 열이다. Django 는 읽기만 한다.
-    published_date_kst = models.DateField(editable=False)
+    # DB 가 계산하는 생성 열이다. 앱이 쓰지 않는다.
+    #
+    # SQLite 시절에는 타임존을 아는 날짜 추출이 불가능해 앱이 직접 썼고, 빈 문자열로 남은
+    # 과거 행 때문에 조회 쪽에서 COALESCE 로 되살려야 했다. DB 가 계산하면 그 부류의 행이
+    # 아예 생기지 않는다.
+    #
+    # STORED 생성 열은 IMMUTABLE 식을 요구한다. `timezone(text, timestamptz)` 는
+    # pg_proc 에서 IMMUTABLE 이다(`timestamptz::date` 는 TimeZone GUC 를 읽어 STABLE 이라
+    # 쓸 수 없다).
+    published_date_kst = models.GeneratedField(
+        expression=Cast(
+            models.Func(
+                Coalesce("published_at", "collected_at"),
+                models.Value("Asia/Seoul"),
+                function="timezone",
+                arg_joiner=" AT TIME ZONE ",
+                template="(%(expressions)s)",
+            ),
+            output_field=models.DateField(),
+        ),
+        output_field=models.DateField(),
+        db_persist=True,
+    )
     insight_status = models.TextField(choices=InsightStatus, default=InsightStatus.PENDING)
 
     objects = NewsArticleManager()
 
     class Meta:
-        managed = False
         db_table = "news_articles"
         ordering = ["-published_at", "-id"]
         verbose_name = "수집 기사"
         verbose_name_plural = "수집 기사"
+        indexes = [
+            models.Index(
+                fields=["published_date_kst", "published_at"],
+                name="news_art_pubdate_idx",
+            ),
+            models.Index(fields=["source", "collected_at"], name="news_art_src_coll_idx"),
+            # 본문 분석 큐의 "대기 중인 기사" 조회를 받친다.
+            models.Index(
+                fields=["insight_status", "published_at"],
+                name="news_art_queue_idx",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.title[:60]
 
 
 class NewsInsight(models.Model):
+    id = models.AutoField(primary_key=True)
     article = models.OneToOneField(
         NewsArticle, on_delete=models.CASCADE, db_column="article_id", related_name="insight"
     )
@@ -154,16 +200,22 @@ class NewsInsight(models.Model):
     updated_at = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = "news_insights"
         verbose_name = "본문 분석"
         verbose_name_plural = "본문 분석"
+        indexes = [
+            # 키워드·업종 정확 일치 필터를 인덱스로 받는다. `@>` 연산자만 이 인덱스를
+            # 타고, `jsonb_exists()` 함수 형태는 Seq Scan 이 된다(실측).
+            GinIndex(fields=["keywords"], name="news_insights_keywords_gin"),
+            GinIndex(fields=["sectors"], name="news_insights_sectors_gin"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.article_id}: {self.summary[:40]}"
 
 
 class NewsArticleSymbol(models.Model):
+    id = models.AutoField(primary_key=True)
     article = models.ForeignKey(
         NewsArticle, on_delete=models.CASCADE, db_column="article_id", related_name="symbols"
     )
@@ -177,17 +229,26 @@ class NewsArticleSymbol(models.Model):
     created_at = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = "news_article_symbols"
         ordering = ["-relevance"]
         verbose_name = "기사 종목"
         verbose_name_plural = "기사 종목"
+        constraints = [
+            # 같은 기사에 같은 종목이 두 번 들어가지 않는다.
+            models.UniqueConstraint(
+                fields=["article", "symbol"], name="news_sym_article_symbol_uq"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["symbol", "created_at"], name="news_sym_symbol_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.company}({self.symbol})"
 
 
 class NewsCrawlRun(models.Model):
+    id = models.AutoField(primary_key=True)
     source = models.ForeignKey(
         NewsSource, on_delete=models.CASCADE, db_column="source_id", related_name="runs"
     )
@@ -199,17 +260,20 @@ class NewsCrawlRun(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        managed = False
         db_table = "news_crawl_runs"
         ordering = ["-started_at"]
         verbose_name = "수집 실행"
         verbose_name_plural = "수집 실행"
+        indexes = [
+            models.Index(fields=["source", "started_at"], name="news_run_src_started_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.source_id} {self.status} {self.started_at:%m-%d %H:%M}"
 
 
 class LlmProvider(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.TextField(unique=True)
     base_url = models.TextField()
     model = models.TextField()
@@ -229,11 +293,14 @@ class LlmProvider(models.Model):
     updated_at = models.DateTimeField()
 
     class Meta:
-        managed = False
         db_table = "llm_providers"
         ordering = ["is_active", "priority"]
         verbose_name = "AI 공급자"
         verbose_name_plural = "AI 공급자"
+        indexes = [
+            # 페일오버의 "쓸 수 있는 공급자" 조회를 받친다.
+            models.Index(fields=["is_active", "priority"], name="llm_prov_order_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name} (우선순위 {self.priority})"

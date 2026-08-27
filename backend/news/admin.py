@@ -4,9 +4,8 @@
 지금까지 psql 로 보던 것들을 화면으로 옮긴다 — 크롤이 왜 실패했나, 인사이트 큐가 얼마나
 밀렸나, 공급자별 사용량이 얼마나 남았나.
 
-모델이 `managed = False` 라 스키마는 여전히 drizzle 소유다. Admin 은 읽고 일부만 고친다.
-관측용 테이블(수집 실행·본문 분석)은 **읽기 전용**으로 둔다 — 손으로 고칠 값이 아니고,
-고치면 크롤 동작 여부 판단이 흐려진다.
+관측용 테이블(수집 실행·수집 기사·본문 분석)은 **읽기 전용**으로 둔다 — 손으로 고칠
+값이 아니고, 고치면 크롤 동작 여부 판단이 흐려진다.
 """
 
 from __future__ import annotations
@@ -65,7 +64,7 @@ class NewsSourceAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "category", "last_status")
     search_fields = ("name", "url", "resolved_url")
     ordering = ("-is_active", "name")
-    # 스키마는 drizzle 소유다. 운영자가 조정할 값만 편집 대상으로 둔다.
+    # 운영자가 조정할 값만 편집 대상으로 둔다. 상태 필드는 파이프라인이 쓴다.
     fields = (
         "name", "url", "resolved_url", "category", "is_active",
         "crawl_hour_kst", "window_hours", "max_pages",
