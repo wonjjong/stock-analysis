@@ -13,6 +13,7 @@
     <div class="form-row">
       <label>{{ form.name.label }} <small>선택</small>{{ form.name }}</label>
       <label>{{ form.category.label }}{{ form.category }}</label>
+      <label>{{ form.crawl_interval_minutes.label }}{{ form.crawl_interval_minutes }}</label>
       <label>{{ form.crawl_hour_kst.label }} <small>한국시간</small>{{ form.crawl_hour_kst }}</label>
       <label>{{ form.max_pages.label }} <small>RSS는 무관</small>{{ form.max_pages }}</label>
       <label>{{ form.window_hours.label }}{{ form.window_hours }}</label>
@@ -36,7 +37,7 @@
         <div class="dim" style="font-size:9px">{{ s.url|truncatechars:52 }}</div>
       </td>
       <td class="num dim">
-        {{ s.crawl_hour_kst|stringformat:"02d" }}:00 KST<br>
+        {% if s.crawl_interval_minutes %}{{ s.crawl_interval_minutes }}분마다{% else %}{{ s.crawl_hour_kst|stringformat:"02d" }}:00 KST{% endif %}<br>
         {{ s.window_hours }}시간 창 · {{ s.max_pages }}페이지
       </td>
       <td>

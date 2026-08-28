@@ -24,11 +24,10 @@ from news.crawler.fetcher import CrawlError
 from news.crawler.insights import rule_insight
 from news.crawler.jsurl import InvalidSourceUrl
 from news.crawler.llm_presets import LLM_PRESETS
-from news.crawler.schedule import next_run_at
 from news.crawler.symbols import match_symbols
 from news.forms import AnalyzeForm, ArchiveFilterForm, ProviderForm, SourceForm
 from news.models import InsightStatus, LlmProvider, NewsArticle, NewsCrawlRun, NewsSource
-from news.services.ingest import crawl_source
+from news.services.ingest import crawl_source, next_crawl_ms
 from news.services.insights import insight_queue_stats, process_pending_insights
 from news.services.llm import is_configured, provider_stats
 
@@ -132,6 +131,7 @@ def source_create(request: HttpRequest) -> HttpResponse:
             "company": "시장 전체",
             "category": data["category"],
             "crawl_hour_kst": data["crawl_hour_kst"],
+            "crawl_interval_minutes": data["crawl_interval_minutes"],
             "max_pages": data["max_pages"],
             "window_hours": data["window_hours"],
             "is_active": True,
@@ -183,7 +183,7 @@ def source_action(request: HttpRequest, source_id: int, action: str) -> HttpResp
         NewsSource.objects.filter(pk=source.pk).update(
             is_active=not source.is_active,
             next_crawl_at=datetime.fromtimestamp(
-                next_run_at(source.crawl_hour_kst, int(now.timestamp() * 1000)) / 1000, tz=UTC
+                next_crawl_ms(source, int(now.timestamp() * 1000)) / 1000, tz=UTC
             ),
             updated_at=now,
         )

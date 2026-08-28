@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from news.crawler.feed import looks_like_feed, parse_feed
 from news.crawler.html import find_next_page_url, parse_news_page
 
@@ -61,18 +63,23 @@ def test_live_feed_fixture_matches(parity: dict, now_ms: int) -> None:
 
     픽스처 2개(합성 8건)만으로는 부족하다 — 실제 피드에는 다양한 날짜 형식과 HTML 엔티티,
     CDATA 가 섞여 있고 조용한 과소수집은 거기서 발생한다.
+
+    **이 테스트는 지금 항상 skip 된다.** 원문 90KB 는 저작권 때문에 저장소에 두지 않았고
+    (`.gitignore` 의 parity/pages 참고), 그 파일을 만들던 `scripts/harvest-parity.mjs` 는
+    TypeScript 원본을 esbuild 로 번들해 돌리는 스크립트여서 TS 삭제와 함께 사라졌다.
+    같은 URL 을 다시 내려받아도 오늘의 피드는 정답지를 만든 그때의 바이트가 아니므로
+    되살릴 수 없다. 남은 명세는 `expected.json` 의 합성 사례들이다.
+
+    지우지 않고 두는 이유: 무엇이 검증되지 않고 있는지가 보여야 한다. 조용한 과소수집은
+    이 프로젝트에서 가장 비싼 실패 방식이다.
     """
     live = parity.get("liveFeedFixture")
     if not live:
-        import pytest
-
-        pytest.skip("라이브 피드 정답지가 없습니다. scripts/harvest-parity.mjs 참고.")
+        pytest.skip("라이브 피드 정답지가 없습니다(위 docstring 참고).")
 
     path = FIXTURES.parent / "parity" / live["file"]
     if not path.is_file():
-        import pytest
-
-        pytest.skip(f"{path} 가 없습니다.")
+        pytest.skip(f"{path} 가 없습니다(위 docstring 참고 — 재생성 불가).")
 
     items = parse_feed(path.read_text(encoding="utf-8"), live["url"], now_ms)
     problems = _diff([i.as_dict() for i in items], live["items"])

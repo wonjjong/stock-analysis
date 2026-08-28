@@ -7,7 +7,7 @@
 리서치 엔진(팩터 랭킹·백테스트)은 아직 없습니다.
 
 - `/` — 파이프라인 상태 한 화면: 소스, 분석 큐, 공급자, 최근 실행, 많이 언급된 종목
-- `/news/sources` — 뉴스 사이트 등록, 수집 시각·목록 페이지 수·수집 창 관리
+- `/news/sources` — 뉴스 사이트 등록, 수집 주기(하루 한 번 또는 N분마다)·목록 페이지 수·수집 창 관리
 - `/news/archive` — 수집한 기사를 기간·소스·종목·감성으로 검색. 행을 펼치면 요약·키워드·태깅 종목·시장 관점·근거
 - `/news/providers` — AI 공급자 등록, 우선순위·일일 한도·쿨다운
 - `/news/lab` — 기사를 붙여넣어 규칙 엔진과 AI가 무엇을 뽑는지 확인 (저장하지 않음)
@@ -21,7 +21,7 @@
 - [아키텍처](#아키텍처)
 - [코드 구조](#코드-구조) ← 어디에 무엇이 있나
 - [데이터베이스](#데이터베이스)
-- [뉴스 수집](#뉴스-수집)
+- [뉴스 수집](#뉴스-수집) · [수집 주기](#수집-주기)
 - [본문 기반 분석 파이프라인](#본문-기반-분석-파이프라인)
 - [AI 공급자 우선순위와 폴백](#ai-공급자-우선순위와-폴백)
 - [TypeScript 에서 Python 으로](#typescript-에서-python-으로)
@@ -47,18 +47,29 @@ cp ../.env.example ../.env
 .venv/bin/python manage.py run_scheduler  # 별 터미널 — 주기 수집·본문 분석
 ```
 
+`runserver` 와 `run_scheduler` 는 **각각 자기 터미널을 차지하는 상시 프로세스**입니다.
+백그라운드로 돌리려면 세션에서 떼어내야 합니다 — 그러지 않으면 터미널이 닫힐 때 같이
+죽고, 로그에는 예외 없이 기동 메시지만 남아 원인을 찾기 어렵습니다.
+
+```bash
+nohup .venv/bin/python manage.py runserver 8000 --noreload > /tmp/signalist.log 2>&1 &
+```
+
+`--noreload` 는 개발 서버의 자동 리로더가 자식 프로세스를 하나 더 띄우는 것을 막습니다.
+대신 코드를 고치면 직접 재시작해야 합니다.
+
 `DATABASE_URL`은 `.env`에 둡니다. 기본값은 compose가 노출하는
 `postgresql://postgres:postgres@localhost:55432/signalist`입니다.
 
 | 명령 | 내용 |
 |---|---|
 | `manage.py runserver` | 개발 서버 |
-| `manage.py run_scheduler [--interval N] [--batch N] [--once]` | 주기 수집 + 본문 분석 |
+| `manage.py run_scheduler [--interval N] [--batch N] [--once]` | 상시 프로세스. `--interval` 은 tick 간격(초)이지 소스의 수집 주기가 아닙니다 — 그것은 소스마다 DB 에 있습니다 |
 | `manage.py crawl_news [--source N] [--limit N]` | 기한이 된 소스 수집 |
 | `manage.py analyze_news [--limit N] [--stats]` | 본문 분석 / 큐 현황 |
 | `manage.py migrate` · `makemigrations` | 스키마 |
 | `manage.py createsuperuser` | Admin 계정 |
-| `.venv/bin/python -m pytest` | 테스트 96개 |
+| `.venv/bin/python -m pytest` | 테스트 107개 |
 | `.venv/bin/ruff check .` | 린트 |
 
 ### 환경변수
@@ -157,7 +168,7 @@ backend/
       insights.py     인사이트 조립과 검증
       llm.py          OpenAI 호환 어댑터 · 실패 분류 · 쿨다운
       window.py       수집 창
-      schedule.py     다음 실행 시각
+      schedule.py     다음 실행 시각 (일간 · 분 주기)
     services/         DB · 네트워크를 만지는 층
       ingest.py       수집 오케스트레이션
       insights.py     본문 분석 큐
@@ -167,7 +178,9 @@ backend/
     admin.py          운영 조회
     templates/news/   HTML
     management/commands/  crawl_news · analyze_news · run_scheduler
-    tests/            테스트 96개 + 정답지
+    tests/            테스트 107개 + 정답지
+  research/
+    recommendation.py  팩터 랭킹 67줄. 아직 호출되지 않는다
 ```
 
 ### `crawler/` 와 `services/` 를 나눈 이유
@@ -175,7 +188,7 @@ backend/
 `crawler/` 는 **Django 를 import 하지 않습니다.** 순수 함수만 있고 DB·네트워크는
 `services/` 가 담당합니다.
 
-덕분에 파싱 로직 테스트가 DB 없이 돌고(96개 중 대부분), 이식 동일성을 고정 입력으로
+덕분에 파싱 로직 테스트가 DB 없이 돌고(107개 중 대부분), 이식 동일성을 고정 입력으로
 증명할 수 있습니다. `fetcher.py` 와 `body.py` 만 `httpx` 를 쓰는데, 이들도 클라이언트를
 인자로 받아 호출부가 수명을 관리합니다 — prefork 워커에서 모듈 레벨로 공유하면 소켓이
 자식 간에 섞입니다.
@@ -246,32 +259,6 @@ SQLite 시절에는 타임존을 아는 날짜 추출이 불가능해 앱이 직
 배열 원소 경계를 넘어 매칭됩니다 — 실측하면 `","` 검색이 전체 행에 매칭됐습니다. jsonb는 쓰기
 시점에 형식을 검증하고 GIN 인덱스로 원소 단위 질의를 받쳐 줍니다.
 
-### D1 호환 어댑터
-
-`db/index.ts`가 `pg` 위에 D1 문장 API를 재현합니다. Cloudflare에서 옮겨올 때 호출부 ~30곳을
-그대로 두기 위해서입니다.
-
-```ts
-db.prepare(sql).bind(...params).first<T>() | .all<T>() | .run()
-db.batch([stmt, ...])        // 한 트랜잭션에서 원자적 순차 실행
-result.meta.changes          // 영향 행 수
-```
-
-`?` 자리표시자를 `$n`으로 변환하고(따옴표 안은 건너뜀), 드라이버 기본값이 D1과 다른 부분은 타입
-파서로 맞춥니다:
-
-```ts
-types.setTypeParser(20,   (v) => Number(v));      // int8 — COUNT(*)가 문자열로 오는 것 방지
-types.setTypeParser(1184, (v) => Date.parse(v));  // timestamptz → 정수 밀리초
-types.setTypeParser(1082, (v) => v);              // date → 'YYYY-MM-DD' 문자열 유지
-```
-
-이걸 안 하면 조용히 형태만 바뀝니다 — `summary.total.toLocaleString()`이 천단위 구분을 잃고,
-`number`로 선언된 프론트 타입에 `Date`가 들어옵니다.
-
-`db/sql.ts`는 런타임 import가 없는 타입 전용 파일입니다. 크롤러가 드라이버에 묶이지 않게 하려는
-것이고, 그래서 esbuild로 파서만 번들하는 테스트가 그대로 동작합니다.
-
 ---
 
 ## 뉴스 수집
@@ -279,7 +266,32 @@ types.setTypeParser(1082, (v) => v);              // date → 'YYYY-MM-DD' 문�
 `news/crawler/` 의 순수 함수들이 파싱을, `news/services/ingest.py` 가 DB 쓰기를 담당합니다.
 
 `/news/sources`에 뉴스 사이트나 뉴스 목록 URL을 등록하면 그 자리에서 1회 수집하고, 이후
-스케줄러가 설정한 한국시간에 하루 한 번 실행합니다.
+스케줄러가 소스마다 설정된 주기로 실행합니다.
+
+### 수집 주기
+
+소스마다 둘 중 하나를 고릅니다.
+
+| 설정 | 동작 | 다음 실행 시각 계산 |
+|---|---|---|
+| `수집 주기` = 0 (기본) | 하루 한 번, `crawl_hour_kst` 시각에 | `next_run_at()` |
+| `수집 주기` = 30 등 | 그 분 주기로 | `next_interval_run_at()` |
+
+주기를 고르면 **경계에 붙습니다.** 12:05에 돌면 다음은 12:30이고, 12:44에 돌면 13:00입니다.
+`지금 + 30분`이 아닙니다 — 그렇게 하면 실행이 조금씩 늦어질 때 시각이 계속 밀려 로그를 읽을 수
+없게 됩니다.
+
+**주기를 줄여도 수집 창은 줄이지 마세요.** 30분마다 돈다고 창을 30분으로 맞추면 구간이 딱
+붙어서, 실행이 한 번 실패하거나 피드가 늦게 반영되는 순간 그 구간의 기사는 **영영 들어오지
+않습니다.** 그리고 예외가 아니라 `새 기사 없음`으로 기록되므로 몇 주간 모릅니다. 창을 넉넉히
+겹치게 두면 같은 기사를 여러 번 보지만 `canonical_url` 유니크 인덱스가 흡수해 중복 행이 생기지
+않습니다 — 겹침은 비용이 아니라 안전장치입니다. 30분 주기라면 창은 6시간(최솟값) 이상을
+권합니다.
+
+`window_hours`의 최솟값이 6시간인 것이 이 원칙을 강제합니다. 30분 창은 설정할 수 없습니다.
+
+주기를 바꿔도 이미 잡혀 있는 `next_crawl_at`은 그대로입니다. 즉시 반영하려면 Admin 의
+`다음 실행 시각을 지금으로` 액션을 쓰거나 `/news/sources`의 `지금 수집`을 누르세요.
 
 **RSS·Atom 주소를 등록하면** 발행시각이 타임존과 함께 확정적으로 제공되므로 HTML 추론보다
 정확하고 한 번에 더 많은 기사를 가져옵니다. 사이트가
@@ -296,8 +308,8 @@ ETag/Last-Modified 조건부 요청.
 
 수집기는 목록과 요약만 저장하므로, 종목·시황 분석에 쓸 근거는 별도 큐가 만듭니다. 기사마다
 `insight_status`가 `대기`로 들어가고 스케줄러가 `processPendingInsights()`로 한 배치씩
-소화합니다. `/news/archive`의 `본문 분석 실행` 버튼이나 `POST /api/news/insights`로 직접 돌릴
-수도 있고, `GET /api/news/insights`는 큐 현황을 돌려줍니다.
+소화합니다. `/news/archive`의 `본문 분석 실행` 버튼(`POST /news/insights/run`)으로 직접 돌릴
+수도 있고, 큐 현황은 `/` 대시보드와 `manage.py analyze_news --stats` 에 나옵니다.
 
 1. `canonical_url`의 원문 페이지를 robots.txt를 확인한 뒤 읽어 문단 태그에서 본문만 추출합니다.
    저작권·제보 안내 같은 상투 문구는 버립니다.
@@ -409,17 +421,27 @@ SIGNALIST_LLM_TIMEOUT_MS=25000 # 선택
 ## 테스트
 
 ```bash
-cd backend && .venv/bin/python -m pytest        # 96개
+cd backend && .venv/bin/python -m pytest        # 107개 (1개 skip)
 .venv/bin/python -m pytest -k parity            # 이식 동일성만
+.venv/bin/python -m pytest news/tests/test_ingest_db.py   # DB 를 실제로 때리는 것만
 ```
 
-**파서 테스트**는 `tests/fixtures/`의 고정 픽스처(`news-feed.xml`, `news-list.html`)에 esbuild로
-번들한 실제 소스를 돌립니다. 단정이 구체적입니다 — 스포츠 스코어(`3-2`)와 기사 번호
+**파서 테스트**는 `news/tests/fixtures/`의 고정 픽스처(`news-feed.xml`, `news-list.html`)와
+`parity/expected.json`의 정답지를 씁니다. 단정이 구체적입니다 — 스포츠 스코어(`3-2`)와 기사 번호
 (`AKR20260827173200001`)를 날짜로 오인하지 않는지, `"12분 전"`·`"오늘 07:30"`을 읽는지, 12월
 목록을 1월에 읽어도 연도를 되돌리는지, 수집 창 경계에서 정확히 자르는지, 긴 종목명을 먼저 세는지.
 
-**SSR 테스트**는 `next start`를 띄우고 HTTP로 화면들을 확인합니다. 예전에는 Cloudflare Worker
-export를 직접 호출했는데 그 export가 없어져 재작성했습니다.
+**DB 테스트**(`test_ingest_db.py`)는 `insert_ignore` 의 인서트 경로를 실제로 지납니다. 이것이
+따로 있는 이유는 실제로 당한 일 때문입니다 — `insert_ignore` 가 `insight_status` 컬럼을
+빠뜨려 **모든 수집이 NOT NULL 위반으로 실패**했는데, 당시 96개가 전부 `crawler/` 의 순수
+함수만 검사해서 하나도 잡지 못했습니다. Django 의 `default=` 는 파이썬 쪽 값이라 DDL 에
+DEFAULT 를 만들지 않고, 이 raw SQL 은 ORM 을 우회합니다.
+
+**항상 skip 되는 테스트가 하나 있습니다.** `test_live_feed_fixture_matches` 는 실제 언론사 피드
+90KB 를 쓰는데, 원문을 저장소에 두지 않았고 그 파일을 만들던 `harvest-parity.mjs` 가 TypeScript
+원본을 esbuild 로 번들해 돌리는 스크립트라 TS 삭제와 함께 사라졌습니다. 같은 URL 을 다시
+내려받아도 정답지를 만든 그때의 바이트가 아니므로 되살릴 수 없습니다. 지우지 않고 두는 것은
+무엇이 검증되지 않고 있는지 보이게 하기 위해서입니다.
 
 ---
 
@@ -427,21 +449,27 @@ export를 직접 호출했는데 그 export가 없어져 재작성했습니다.
 
 실제로 부딪혀 코드에 주석으로 남긴 것들입니다. 대부분 "동작하지만 조용히 틀린" 부류입니다.
 
-**jsonb `?` 연산자와 자리표시자 `?`가 충돌합니다.** 어댑터가 `?`를 `$n`으로 바꾸므로
-`keywords ? 'x'`를 쓸 수 없습니다. `jsonb_exists()`는 `?`를 피하지만 **GIN 인덱스를 잃습니다**
-(실측: `@>`와 `?`는 Bitmap Heap Scan, `jsonb_exists`는 Seq Scan). **`@>`가 유일하게 양쪽을
-만족**합니다 — `keywords @> '["x"]'::jsonb`.
+**Django 의 `default=` 는 DB 에 DEFAULT 를 만들지 않습니다.** 파이썬 쪽에서만 채워집니다.
+ORM 을 우회하는 raw SQL 인서트가 그 컬럼을 빠뜨리면 NOT NULL 위반으로 죽습니다. 실제로
+`insert_ignore` 가 `insight_status` 를 빼먹어 **모든 수집이 실패**했고, 당시 순수 함수
+테스트 96개가 하나도 잡지 못했습니다. 컬럼을 늘릴 때는 `NewsArticleManager._COLUMNS` 를 같이
+고치고 `test_ingest_db.py` 로 확인하세요.
 
-**jsonb는 읽기와 쓰기가 비대칭입니다.** 드라이버는 조회 결과를 파싱된 배열로 주지만, 파라미터로
-받은 JS 배열은 Postgres 배열 리터럴 `{a,b}`로 직렬화해 jsonb 파싱이 실패합니다. 쓰기에는
-`JSON.stringify`가 필요합니다. (객체는 JSON으로 직렬화되지만 배열은 그렇지 않습니다.)
+**jsonb 원소 검색은 `@>` 만 인덱스를 탑니다.** `jsonb_exists()` 함수 형태는 Seq Scan 이 됩니다
+(실측). `keywords @> '["x"]'::jsonb` 를 쓰세요. GIN 인덱스는 `news_insights_keywords_gin`
+입니다.
 
-**`to_timestamp(ms/1000)`은 초 미만을 절삭합니다.** 정수 나눗셈입니다.
-`ms::double precision / 1000`이어야 합니다. 특히 `next_crawl_at`(미래 시각)이 틀리면 모든 소스
-스케줄이 밀립니다.
+**jsonb는 읽기와 쓰기가 비대칭입니다.** 드라이버는 조회 결과를 파싱된 리스트로 주지만,
+파라미터로 받은 Python 리스트는 Postgres 배열 리터럴 `{a,b}`로 직렬화해 jsonb 파싱이
+실패합니다. raw SQL 로 쓸 때는 `json.dumps` 한 문자열을 넘겨야 합니다
+(`services/insights.py::_upsert_insight`).
 
 **Postgres `GROUP BY`는 SQLite보다 엄격합니다.** `GROUP BY symbol`에서 `company`를 선택할 수
 없습니다(PK가 아니라 함수종속 불성립). `GROUP BY s.id`는 PK라 유효합니다.
+
+**수집 주기를 줄일 때 수집 창을 같이 줄이지 마세요.** 구간이 딱 붙으면 실행이 한 번
+어긋나는 순간 그 구간 기사가 영영 들어오지 않고, 예외가 아니라 `새 기사 없음`으로 기록됩니다.
+[수집 주기](#수집-주기) 참고.
 
 **수집 실행 행은 네트워크 I/O 전에 커밋합니다.** 전체를 한 트랜잭션으로 감싸면 진행 중인 실행이
 보이지 않고, 최대 10페이지 × 12초 동안 트랜잭션이 열려 vacuum을 방해합니다.
@@ -505,7 +533,7 @@ SQL 경계에서 명시적 `at(ms)`로 변환합니다. 새 바인딩에서 빠�
 
 ## Point-in-time 저장 설계
 
-`api/migrations/001_initial.sql`에 17개 테이블 설계가 있습니다 — 종목·OHLCV·재무·밸류에이션·거시
+`docs/reference/001_initial_pit_schema.sql`에 17개 테이블 설계가 있습니다 — 종목·OHLCV·재무·밸류에이션·거시
 관측치, 뉴스 원문·버전·사건 클러스터·종목 연결, 관심종목과 포지션, 추천 실행·결과·분석 근거.
 
 **한 번도 실행된 적 없는 설계 문서입니다.** 참조용으로만 보고 그대로 `psql -f` 하지 마세요 —
@@ -525,29 +553,21 @@ SQL/pandas로 가게 되므로, ORM 레이어의 필터는 정작 bias가 발생
 
 ## 앞으로
 
-### 정리 대상
-
-- **`api/`** — FastAPI 프로토타입 16개 파일. DB 코드가 0줄이고(SQLAlchemy·asyncpg는 선언만),
-  Redis/Celery도 0줄, 프론트가 한 번도 호출하지 않으며 2주 넘게 정체했습니다. 보존 가치는
-  `api/app/domain/recommendation.py`의 `rank_candidates` **67줄**뿐입니다 — 순수 stdlib으로
-  eligibility 필터, winsorized z-score 횡단면 정규화, VIX/환율/신용스프레드 기반 국면 가중치
-  조절, ATR 위험예산 목표가까지 완성돼 있고 테스트 2개가 붙어 있습니다.
-- **`app/data.ts`** — 리서치 엔진이 실제 데이터를 내기 시작하면 삭제합니다.
-
 ### 리서치 엔진
 
-별도 서비스로 두고, TypeScript가 소유한 뉴스 테이블은 그대로 둡니다. **한 테이블에 두 소유자를
-두지 않는다**는 규칙만 지키면 두 언어가 한 DB를 공유하는 것은 정상 아키텍처입니다.
+`api/` FastAPI 프로토타입과 `app/data.ts` 목데이터는 삭제됐습니다. 그 중 보존 가치가 있던
+`rank_candidates` **67줄**만 `research/recommendation.py` 로 옮겨 왔습니다 — 순수 stdlib 으로
+eligibility 필터, winsorized z-score 횡단면 정규화, VIX/환율/신용스프레드 기반 국면 가중치
+조절, ATR 위험예산 목표가까지 되어 있고 테스트 2개가 붙어 있습니다. **아직 아무 데서도
+호출하지 않습니다.**
 
-첫 슬라이스로 권하는 것은 **읽기 전용 관리 화면**입니다. 예를 들어 Django라면
-`managed = False` 모델로 뉴스 테이블을 Admin에 얹으면 스키마 소유권 충돌 없이 하루 만에 크롤
-실패 추적·큐 적체 확인·공급자 사용량을 화면으로 얻습니다. 그다음이 `rank_candidates`를 실제
-데이터에 연결해 대시보드의 mock을 대체하는 작업이고, 여기서야 `instruments`·`valuation_snapshots`
-같은 PIT 테이블이 필요해집니다.
+다음 작업은 `rank_candidates` 를 실제 데이터에 연결하는 것이고, 여기서야
+`instruments`·`valuation_snapshots` 같은 PIT 테이블이 필요해집니다.
 
-이 순서가 중요한 이유는 `api/`가 죽은 이유가 그것이기 때문입니다 — 아무것도 실제로 소유하지 않는
-패러렐 프로토타입이었고, 프론트가 한 번도 호출하지 않았습니다. 첫 주에 눈에 보이는 것을 만들지
-않으면 같은 일이 반복됩니다.
+순서를 지켜야 하는 이유는 `api/` 가 죽은 이유가 그것이기 때문입니다 — 아무것도 실제로
+소유하지 않는 패러렐 프로토타입이었고, 프론트가 한 번도 호출하지 않았습니다. 첫 주에 눈에
+보이는 것을 만들지 않으면 같은 일이 반복됩니다. 뉴스 파이프라인이 지금 동작하는 것은
+반대로 했기 때문입니다.
 
 ### 운영 전 체크
 

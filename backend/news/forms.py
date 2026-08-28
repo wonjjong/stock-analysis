@@ -18,6 +18,11 @@ WINDOW_CHOICES = [
     (6, "6시간"), (12, "12시간"), (24, "24시간"), (36, "36시간 (기본)"),
     (48, "48시간 (해외 매체 권장)"), (72, "72시간"), (168, "7일"),
 ]
+INTERVAL_CHOICES = [
+    (0, "하루 한 번 (아래 시각에)"),
+    (15, "15분마다"), (30, "30분마다"), (60, "1시간마다"),
+    (180, "3시간마다"), (360, "6시간마다"),
+]
 
 
 class SourceForm(forms.Form):
@@ -37,9 +42,15 @@ class SourceForm(forms.Form):
     category = forms.ChoiceField(
         label="뉴스 분류", choices=[(c, c) for c in CATEGORIES], initial="종합"
     )
+    crawl_interval_minutes = forms.TypedChoiceField(
+        label="수집 주기", choices=INTERVAL_CHOICES, coerce=int, initial=0,
+        help_text="주기를 고르면 아래 '매일 수집 시간'은 무시되고 매시 정각 기준"
+        " 경계마다 돕니다. 짧은 주기라도 '수집 기간'은 넉넉히 두세요 — 겹치는 구간은"
+        " 중복 저장되지 않고 걸러집니다.",
+    )
     crawl_hour_kst = forms.TypedChoiceField(
         label="매일 수집 시간", choices=HOUR_CHOICES, coerce=int, initial=6,
-        help_text="한국시간 기준입니다.",
+        help_text="한국시간 기준입니다. 수집 주기를 고른 경우에는 쓰이지 않습니다.",
     )
     max_pages = forms.TypedChoiceField(
         label="목록 페이지 수", choices=PAGE_CHOICES, coerce=int, initial=1,

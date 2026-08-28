@@ -27,10 +27,10 @@ from news.crawler.analysis import analyze_news_locally
 from news.crawler.fetcher import CrawlError, build_client
 from news.crawler.jsurl import InvalidSourceUrl
 from news.crawler.pipeline import fetch_source_items
-from news.crawler.schedule import next_run_at
+from news.crawler.schedule import next_interval_run_at, next_run_at
 from news.crawler.types import SourceSpec
 from news.crawler.window import select_recent_items
-from news.models import CrawlStatus, NewsArticle, NewsCrawlRun, NewsSource
+from news.models import CrawlStatus, InsightStatus, NewsArticle, NewsCrawlRun, NewsSource
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,13 @@ def _spec(source: NewsSource) -> SourceSpec:
     )
 
 
+def next_crawl_ms(source: NewsSource, now_ms: int) -> int:
+    """주기가 설정돼 있으면 주기 경계, 아니면 하루 한 번 `crawl_hour_kst`."""
+    if source.crawl_interval_minutes > 0:
+        return next_interval_run_at(source.crawl_interval_minutes, now_ms)
+    return next_run_at(source.crawl_hour_kst, now_ms)
+
+
 def crawl_source(source_id: int) -> CrawlResult:
     source = NewsSource.objects.filter(pk=source_id, is_active=True).first()
     if source is None:
@@ -95,7 +102,7 @@ def crawl_source(source_id: int) -> CrawlResult:
     try:
         with build_client() as client:
             fetched = fetch_source_items(client, _spec(source), started_ms)
-        next_ms = next_run_at(source.crawl_hour_kst, started_ms)
+        next_ms = next_crawl_ms(source, started_ms)
 
         if fetched.unchanged:
             with transaction.atomic():
@@ -136,6 +143,7 @@ def crawl_source(source_id: int) -> CrawlResult:
                 score_adjustment=analysis["scoreAdjustment"],
                 analysis_summary=analysis["summary"],
                 collected_at=started_at,
+                insight_status=InsightStatus.PENDING,
             )
 
         with transaction.atomic():
@@ -164,7 +172,7 @@ def crawl_source(source_id: int) -> CrawlResult:
                 last_status=CrawlStatus.ERROR,
                 last_error=message,
                 last_crawled_at=started_at,
-                next_crawl_at=_at(next_run_at(source.crawl_hour_kst, started_ms)),
+                next_crawl_at=_at(next_crawl_ms(source, started_ms)),
                 updated_at=started_at,
             )
             NewsCrawlRun.objects.filter(pk=run.pk).update(
