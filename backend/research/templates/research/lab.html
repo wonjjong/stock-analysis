@@ -1,0 +1,170 @@
+{% extends "news/base.html" %}
+{% block title %}종목 AI 분석실{% endblock %}
+{% block eyebrow %}LIVE STOCK ANALYSIS LAB{% endblock %}
+{% block heading %}티커를 입력하면<br>Gemini가 근거를 분석합니다{% endblock %}
+{% block lede %}<p class="lede">프로젝트가 시세·재무·뉴스를 먼저 수집하고, 등록된 AI 공급자는 그 근거 안에서 상승 요인과 위험을 해석합니다.</p>{% endblock %}
+
+{% block content %}
+<section class="panel" style="margin-bottom:16px">
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-row" style="position:relative">
+      <label>{{ form.symbol.label }}{{ form.symbol }}</label>
+      <ul id="symbol-suggest" hidden
+          style="position:absolute;z-index:20;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;
+                 list-style:none;background:#fff;border:1px solid #d5d5d5;border-radius:6px;
+                 box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:280px;overflow-y:auto"></ul>
+    </div>
+    {% for error in form.symbol.errors %}<p class="neg">{{ error }}</p>{% endfor %}
+    <div class="actions"><button class="primary" type="submit">시장 데이터 수집 후 AI 분석</button></div>
+  </form>
+  <p class="help">종목명이나 코드를 입력하면 후보가 뜹니다 — 삼성전자, 에코프로, 테슬라, NVDA, 005930.
+    국내는 KIS 종목마스터(코스피·코스닥 2,598개), 미국은 SEC 등록 티커에서 찾습니다.
+    데이터 조회와 AI 호출 때문에 수 초가 걸릴 수 있습니다.</p>
+</section>
+
+<script>
+(() => {
+  const input = document.querySelector('input[name="symbol"]');
+  const list = document.getElementById('symbol-suggest');
+  if (!input || !list) return;
+
+  let timer = null;
+  let items = [];
+  let active = -1;
+
+  const hide = () => { list.hidden = true; active = -1; };
+
+  const choose = (item) => {
+    input.value = item.symbol;
+    hide();
+    input.focus();
+  };
+
+  const paint = () => {
+    list.innerHTML = '';
+    items.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.style.cssText = 'padding:7px 9px;cursor:pointer;border-radius:4px;display:flex;gap:8px;align-items:baseline';
+      if (index === active) li.style.background = '#eef2ff';
+      const name = document.createElement('strong');
+      name.textContent = item.name;
+      const meta = document.createElement('span');
+      meta.style.cssText = 'color:#777;font-size:12px;margin-left:auto';
+      meta.textContent = `${item.symbol} · ${item.exchange}`;
+      li.append(name, meta);
+      li.addEventListener('mousedown', (event) => { event.preventDefault(); choose(item); });
+      list.append(li);
+    });
+    list.hidden = items.length === 0;
+  };
+
+  const search = async (query) => {
+    try {
+      const response = await fetch(`/api/research/stocks/search?q=${encodeURIComponent(query)}`);
+      if (!response.ok) return hide();
+      items = (await response.json()).results || [];
+      active = -1;
+      paint();
+    } catch { hide(); }
+  };
+
+  input.setAttribute('autocomplete', 'off');
+  input.addEventListener('input', () => {
+    const query = input.value.trim();
+    clearTimeout(timer);
+    if (query.length < 1) return hide();
+    timer = setTimeout(() => search(query), 180);
+  });
+
+  input.addEventListener('keydown', (event) => {
+    if (list.hidden || items.length === 0) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      active = (active + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
+      paint();
+    } else if (event.key === 'Enter' && active >= 0) {
+      event.preventDefault();
+      choose(items[active]);
+    } else if (event.key === 'Escape') {
+      hide();
+    }
+  });
+
+  input.addEventListener('blur', () => setTimeout(hide, 120));
+})();
+</script>
+
+{% if result %}
+<div class="grid four" style="margin-bottom:16px">
+  <div class="stat accent"><small>종목</small><strong>{{ result.snapshot.company }}</strong><div class="dim">{{ result.snapshot.symbol }} · {{ result.snapshot.exchange }}</div></div>
+  <div class="stat"><small>최근 종가</small><strong class="num">{{ result.snapshot.price|floatformat:2 }} {{ result.snapshot.currency }}</strong></div>
+  <div class="stat"><small>AI 관점</small><strong>{{ result.report.stance }}</strong></div>
+  <div class="stat"><small>AI 엔진</small><strong>{{ result.report.engine }}</strong></div>
+</div>
+
+<section class="panel" style="margin-bottom:16px">
+  <h2>프로젝트 AI 분석 결과</h2>
+  <p style="line-height:1.8">{{ result.report.executive_summary }}</p>
+  <div class="grid two">
+    <div>
+      <h2>상승 논리</h2>
+      <ul>{% for item in result.report.bull_case %}<li>{{ item }}</li>{% empty %}<li class="dim">확인된 상승 논리가 없습니다.</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <h2>반대 논리</h2>
+      <ul>{% for item in result.report.bear_case %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <h2>확인할 촉매</h2>
+      <ul>{% for item in result.report.catalysts %}<li>{{ item }}</li>{% empty %}<li class="dim">별도 촉매가 제시되지 않았습니다.</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <h2>관점 무효화 조건</h2>
+      <ul>{% for item in result.report.invalidation_conditions %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+  {% if result.report.data_gaps %}
+  <h2>데이터 한계</h2>
+  <ul>{% for item in result.report.data_gaps %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+<section class="panel" style="margin-bottom:16px">
+  <h2>AI에 전달된 시장 스냅샷</h2>
+  <p class="dim">가격 기준 {{ result.snapshot.observed_at }} · 재무 기준 {{ result.snapshot.financial_period|default:"확인 불가" }}</p>
+  <div class="grid four">
+    <div class="stat"><small>1일 수익률</small><strong class="num">{{ result.snapshot.return_1d_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>1개월 수익률</small><strong class="num">{{ result.snapshot.return_1m_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>6개월 수익률</small><strong class="num">{{ result.snapshot.return_6m_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>1년 수익률</small><strong class="num">{{ result.snapshot.return_1y_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>52주 최고가 대비</small><strong class="num">{{ result.snapshot.distance_from_high_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>20일 연환산 변동성</small><strong class="num">{{ result.snapshot.volatility_20d_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>1년 최대 낙폭</small><strong class="num">{{ result.snapshot.max_drawdown_1y_pct|floatformat:2 }}%</strong></div>
+    <div class="stat"><small>베타</small><strong class="num">{{ result.snapshot.beta|floatformat:2|default:"-" }}</strong></div>
+    <div class="stat"><small>시가총액</small><strong class="num">{{ result.snapshot.market_cap|floatformat:"0g"|default:"-" }}</strong></div>
+    <div class="stat"><small>매출</small><strong class="num">{{ result.snapshot.total_revenue|floatformat:"0g"|default:"-" }}</strong></div>
+    <div class="stat"><small>순이익</small><strong class="num">{{ result.snapshot.net_income|floatformat:"0g"|default:"-" }}</strong></div>
+    <div class="stat"><small>총부채</small><strong class="num">{{ result.snapshot.total_debt|floatformat:"0g"|default:"-" }}</strong></div>
+  </div>
+</section>
+
+<div class="grid two">
+  <section class="panel">
+    <h2>AI가 받은 근거</h2>
+    {% for item in evidence %}
+      <p>{% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}
+        <span class="chip mute">{{ item.kind }}</span><br>
+        <span class="dim">{{ item.source }} · 기준일 {{ item.observed_at }} · 공개 {{ item.available_at }}</span></p>
+    {% empty %}<p class="empty">근거가 수집되지 않았습니다.</p>
+    {% endfor %}
+  </section>
+  <section class="panel">
+    <h2>AI 공급자 호출</h2>
+    {% for item in attempts %}<p>{{ item.name }} <span class="chip mute">{{ item.kind }}</span>{% if item.detail %}<br><span class="neg">{{ item.detail }}</span>{% endif %}</p>
+    {% empty %}<p class="empty">AI 공급자가 호출되지 않았습니다.</p>{% endfor %}
+    <p class="help">Yahoo Finance 데이터는 지연되거나 누락될 수 있으며 개인 연구·교육 목적의 테스트에 적합합니다. 이 결과는 투자 권유가 아닙니다.</p>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

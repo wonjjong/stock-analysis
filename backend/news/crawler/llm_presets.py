@@ -25,7 +25,7 @@ LLM_PRESETS: tuple[LlmPreset, ...] = (
     LlmPreset(
         "gemini", "Google Gemini",
         "https://generativelanguage.googleapis.com/v1beta/openai",
-        "gemini-2.5-flash", 10, 200,
+        "gemini-3.7-flash", 10, 200,
         "https://aistudio.google.com/apikey",
         "카드 등록 없이 키를 받을 수 있고 한국어 요약 품질이 가장 낫습니다."
         " 무료 티어는 보낸 내용이 모델 개선에 쓰일 수 있습니다.",

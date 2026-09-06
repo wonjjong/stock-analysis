@@ -1,0 +1,52 @@
+{
+  "candidates": [
+    {
+      "symbol": "005930",
+      "price": 78000,
+      "atr_20": 2400,
+      "quality": 82,
+      "value": 71,
+      "momentum": 77,
+      "revisions": 74,
+      "news": 69,
+      "liquidity": 95,
+      "drawdown": 8,
+      "beta": 1.05,
+      "stale_ratio": 0.02
+    },
+    {
+      "symbol": "000660",
+      "price": 210000,
+      "atr_20": 8500,
+      "quality": 88,
+      "value": 63,
+      "momentum": 91,
+      "revisions": 86,
+      "news": 81,
+      "liquidity": 92,
+      "drawdown": 11,
+      "beta": 1.24,
+      "stale_ratio": 0.01
+    },
+    {
+      "symbol": "035420",
+      "price": 225000,
+      "atr_20": 7100,
+      "quality": 70,
+      "value": 68,
+      "momentum": 58,
+      "revisions": 61,
+      "news": 73,
+      "liquidity": 84,
+      "drawdown": 17,
+      "beta": 0.96,
+      "stale_ratio": 0.04
+    }
+  ],
+  "regime": {
+    "vix": 18.5,
+    "usdkrw_change_20d": 1.2,
+    "us10y_change_bp_20d": 14,
+    "credit_spread_change_bp_20d": 6
+  }
+}

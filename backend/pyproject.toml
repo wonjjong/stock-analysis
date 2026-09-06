@@ -8,6 +8,8 @@ dependencies = [
   # 크롤러가 쓰는 HTTP 클라이언트. 전체 작업 데드라인을 걸 수 있어야 하므로
   # requests 대신 httpx 를 쓴다(TS 의 AbortSignal.timeout 의미를 재현).
   "httpx>=0.28,<1",
+  # 리서치 분석실에서 임의 티커의 시세·재무·뉴스 스냅샷을 수집한다.
+  "yfinance>=1.7,<2",
 ]
 
 [project.optional-dependencies]

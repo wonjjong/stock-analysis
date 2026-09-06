@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "django.contrib.postgres",  # GinIndex 등 Postgres 전용 기능
     "django.contrib.staticfiles",
     "news",
+    "research",
 ]
 
 MIDDLEWARE = [
@@ -99,6 +100,26 @@ def _database_from_url(url: str) -> dict[str, object]:
 
 
 DATABASES = {"default": _database_from_url(_env("DATABASE_URL", required=True))}
+
+# 리서치 인덱스(SEC 티커·DART corp_code)는 하루 한 번 받는 수 MB 짜리 전량 파일이다.
+# 워커별 LocMemCache 면 워커 수만큼 중복 다운로드가 생기므로, 공유 백엔드가 있으면 쓴다.
+# MAX_ENTRIES 기본값 300 은 인덱스가 LRU 로 밀려날 수 있어 올려 둔다.
+_CACHE_URL = _env("SIGNALIST_CACHE_URL")
+CACHES = {
+    "default": (
+        {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": _CACHE_URL}
+        if _CACHE_URL
+        else {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "signalist-local",
+            "OPTIONS": {"MAX_ENTRIES": 1000, "CULL_FREQUENCY": 4},
+        }
+    )
+}
+
+# 리서치 데이터 공급자 설정
+SIGNALIST_DART_API_KEY = _env("SIGNALIST_DART_API_KEY")
+SIGNALIST_SEC_USER_AGENT = _env("SIGNALIST_SEC_USER_AGENT")
 
 # 저장은 항상 timestamptz, 표시·조회는 한국시간. published_date_kst 생성 열이
 # 'Asia/Seoul'로 계산하므로 서버 타임존에 의존하지 않는다.

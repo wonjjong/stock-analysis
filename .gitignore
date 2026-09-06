@@ -64,3 +64,6 @@ media/
 
 # Python 패키지 빌드 산출물
 *.egg-info/
+
+# JetBrains IDE 설정. 개발자마다 다르므로 추적하지 않는다.
+.idea/

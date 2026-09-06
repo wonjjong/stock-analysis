@@ -1,0 +1,162 @@
+{% extends "news/base.html" %}
+{% block title %}종목 정량 랭킹{% endblock %}
+{% block eyebrow %}QUANTITATIVE RANKING{% endblock %}
+{% block heading %}종목을 골라 담으면<br>점수로 줄을 세웁니다{% endblock %}
+{% block lede %}<p class="lede">공개 시세·재무와 수집된 뉴스 감성으로 팩터 점수를 만든 뒤, 시장 국면에 따라 가중치를 바꿔 순위를 냅니다. 상위 종목은 AI 분석으로 넘길 수 있습니다.</p>{% endblock %}
+
+{% block content %}
+<section class="panel" style="margin-bottom:16px">
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-row" style="position:relative">
+      <label>{{ form.symbols.label }}{{ form.symbols }}</label>
+      <ul id="symbol-suggest" hidden
+          style="position:absolute;z-index:20;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;
+                 list-style:none;background:#fff;border:1px solid #d5d5d5;border-radius:6px;
+                 box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:280px;overflow-y:auto"></ul>
+    </div>
+    {% for error in form.symbols.errors %}<p class="neg">{{ error }}</p>{% endfor %}
+    <div class="actions"><button class="primary" type="submit">팩터 점수 계산 후 순위 산출</button></div>
+  </form>
+  <p class="help">종목명을 입력하면 후보가 뜨고, 고르면 목록 끝에 추가됩니다. 최대 12개.
+    종목마다 시세를 받아오므로 개수에 비례해 시간이 걸립니다.</p>
+</section>
+
+{% if failures %}
+<section class="panel" style="margin-bottom:16px">
+  <h2>제외된 종목</h2>
+  {% for item in failures %}<p><strong>{{ item.symbol }}</strong><br><span class="neg">{{ item.reason }}</span></p>{% endfor %}
+</section>
+{% endif %}
+
+{% if macro %}
+<div class="grid four" style="margin-bottom:16px">
+  <div class="stat accent"><small>위험회피 강도</small><strong class="num">{{ macro.risk_off }}</strong><div class="dim">높을수록 質·가치 가중</div></div>
+  <div class="stat"><small>VIX</small><strong class="num">{{ macro.vix|floatformat:2 }}</strong></div>
+  <div class="stat"><small>원달러 20일</small><strong class="num">{{ macro.usdkrw_change_20d|floatformat:2 }}%</strong></div>
+  <div class="stat"><small>미10년물 20일</small><strong class="num">{{ macro.us10y_change_bp_20d|floatformat:1 }}bp</strong></div>
+</div>
+{% if not macro.sources.credit_spread %}
+<p class="help" style="margin-bottom:16px">신용스프레드는 무료 데이터 소스가 없어 국면 계산에 반영되지 않았습니다.</p>
+{% endif %}
+{% endif %}
+
+{% if ranked %}
+<section class="panel">
+  <h2>정량 순위</h2>
+  <div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:14px">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #ddd">
+        <th style="padding:8px 6px">#</th><th style="padding:8px 6px">종목</th>
+        <th style="padding:8px 6px">점수</th><th style="padding:8px 6px">신뢰도</th>
+        <th style="padding:8px 6px">판단</th><th style="padding:8px 6px">매수구간</th>
+        <th style="padding:8px 6px">목표</th><th style="padding:8px 6px">손절</th>
+        <th style="padding:8px 6px">강점</th><th style="padding:8px 6px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in ranked %}
+      <tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:8px 6px" class="dim">{{ forloop.counter }}</td>
+        <td style="padding:8px 6px"><strong>{{ row.symbol }}</strong></td>
+        <td style="padding:8px 6px" class="num">{{ row.score }}</td>
+        <td style="padding:8px 6px" class="num">{{ row.confidence }}</td>
+        <td style="padding:8px 6px"><span class="chip {% if row.action == '매수 유효' %}accent{% else %}mute{% endif %}">{{ row.action }}</span></td>
+        <td style="padding:8px 6px" class="num">{{ row.entry_low }}~{{ row.entry_high }}</td>
+        <td style="padding:8px 6px" class="num">{{ row.target }}</td>
+        <td style="padding:8px 6px" class="num">{{ row.stop }}</td>
+        <td style="padding:8px 6px" class="dim">{{ row.reasons|join:", " }}</td>
+        <td style="padding:8px 6px"><a href="{% url 'stock_lab' %}?symbol={{ row.symbol|urlencode }}">AI 분석 →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="help">목표가·손절가는 ATR 기반 기계적 산출값이며 투자 권유가 아닙니다.
+    revisions(애널리스트 추정치 변화)는 공개 소스가 없어 전 종목 중립으로 두었고, 횡단면
+    비교에서 자동으로 기여가 0 이 됩니다.</p>
+</section>
+
+<section class="panel" style="margin-top:16px">
+  <h2>근거 커버리지</h2>
+  <p class="help">각 팩터를 실제 데이터 몇 개로 채웠는지입니다. 0 이면 중립(50)으로 처리된 항목입니다.</p>
+  {% for symbol, counts in coverage.items %}
+  <p><strong>{{ symbol }}</strong>
+    <span class="dim">모멘텀 {{ counts.momentum }} · 가치 {{ counts.value }} · 퀄리티 {{ counts.quality }}
+      · 유동성 {{ counts.liquidity }} · 뉴스 {{ counts.news }} · 추정치 {{ counts.revisions }}</span></p>
+  {% endfor %}
+</section>
+{% endif %}
+
+<script>
+(() => {
+  const input = document.querySelector('input[name="symbols"]');
+  const list = document.getElementById('symbol-suggest');
+  if (!input || !list) return;
+
+  let timer = null, items = [], active = -1;
+  const hide = () => { list.hidden = true; active = -1; };
+
+  // 마지막 쉼표 뒤 조각만 검색어로 쓰고, 고른 종목을 그 자리에 채운다.
+  const tail = () => input.value.split(',').pop().trim();
+
+  const choose = (item) => {
+    const parts = input.value.split(',');
+    parts[parts.length - 1] = ` ${item.symbol}`;
+    input.value = parts.join(',').replace(/^\s+/, '') + ', ';
+    hide();
+    input.focus();
+  };
+
+  const paint = () => {
+    list.innerHTML = '';
+    items.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.style.cssText = 'padding:7px 9px;cursor:pointer;border-radius:4px;display:flex;gap:8px;align-items:baseline';
+      if (index === active) li.style.background = '#eef2ff';
+      const name = document.createElement('strong');
+      name.textContent = item.name;
+      const meta = document.createElement('span');
+      meta.style.cssText = 'color:#777;font-size:12px;margin-left:auto';
+      meta.textContent = `${item.symbol} · ${item.exchange}`;
+      li.append(name, meta);
+      li.addEventListener('mousedown', (event) => { event.preventDefault(); choose(item); });
+      list.append(li);
+    });
+    list.hidden = items.length === 0;
+  };
+
+  const search = async (query) => {
+    try {
+      const response = await fetch(`/api/research/stocks/search?q=${encodeURIComponent(query)}`);
+      if (!response.ok) return hide();
+      items = (await response.json()).results || [];
+      active = -1;
+      paint();
+    } catch { hide(); }
+  };
+
+  input.addEventListener('input', () => {
+    const query = tail();
+    clearTimeout(timer);
+    if (query.length < 1) return hide();
+    timer = setTimeout(() => search(query), 180);
+  });
+
+  input.addEventListener('keydown', (event) => {
+    if (list.hidden || items.length === 0) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      active = (active + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
+      paint();
+    } else if (event.key === 'Enter' && active >= 0) {
+      event.preventDefault();
+      choose(items[active]);
+    } else if (event.key === 'Escape') { hide(); }
+  });
+
+  input.addEventListener('blur', () => setTimeout(hide, 120));
+})();
+</script>
+{% endblock %}

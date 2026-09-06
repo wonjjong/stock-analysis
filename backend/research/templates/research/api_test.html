@@ -1,0 +1,55 @@
+{% extends "news/base.html" %}
+{% block title %}API 연동 테스트{% endblock %}
+{% block eyebrow %}DATA API INTEGRATION LAB{% endblock %}
+{% block heading %}DART와 SEC API의<br>원본 응답을 확인합니다{% endblock %}
+{% block lede %}<p class="lede">설정된 API 키와 User-Agent를 사용하여 한국(DART) 및 미국(SEC) 기업의 재무 데이터를 실시간으로 가져옵니다.</p>{% endblock %}
+
+{% block content %}
+<section class="panel" style="margin-bottom:16px">
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid three">
+      <div class="form-row">
+        <label>{{ form.service.label }}{{ form.service }}</label>
+      </div>
+      <div class="form-row">
+        <label>{{ form.identifier.label }}{{ form.identifier }}</label>
+      </div>
+      <div class="form-row">
+        <label>{{ form.year.label }}{{ form.year }}</label>
+      </div>
+    </div>
+    {% if form.errors %}
+      <div class="neg" style="margin-bottom: 12px;">
+        {% for field in form %}{% for error in field.errors %}{{ error }}<br>{% endfor %}{% endfor %}
+      </div>
+    {% endif %}
+    <div class="actions">
+      <button class="primary" type="submit">데이터 요청 실행</button>
+    </div>
+  </form>
+  <p class="help">
+    DART는 종목코드(005930)나 회사명(삼성전자)을, SEC는 티커(IREN, NVDA)를 넣으세요.<br>
+    기존처럼 corp_code(00126380)나 CIK(320193)를 직접 넣어도 됩니다.
+  </p>
+</section>
+
+{% if company %}
+<section class="panel">
+  <h2>식별자 해결 결과</h2>
+  <p>
+    <strong>{{ company.name }}</strong>{% if company.ticker %} ({{ company.ticker }}){% endif %}
+    &rarr; <code>{{ company.key }}</code>
+    {% if company.aliases %}<br>같은 회사의 다른 티커: {{ company.aliases|join:", " }}{% endif %}
+  </p>
+  <p class="help">{{ company.source }}{% if company.as_of %} · 인덱스 기준일 {{ company.as_of }}{% endif %}</p>
+</section>
+{% endif %}
+
+{% if result %}
+<section class="panel">
+  <h2>API 응답 결과 (Raw JSON)</h2>
+  <pre style="background: #f4f4f4; padding: 16px; border-radius: 4px; overflow-x: auto; font-family: monospace; font-size: 13px; line-height: 1.5; color: #333;">{{ result }}</pre>
+</section>
+{% endif %}
+{% endblock %}

@@ -15,3 +15,11 @@ from .base import *  # noqa: F403
 DEBUG = False
 # 테스트 DB 이름을 분리해 개발 데이터를 건드리지 않는다.
 DATABASES["default"]["TEST"] = {"NAME": "signalist_test"}  # noqa: F405
+
+# 개발 캐시와 섞이지 않도록 테스트 전용 LocMemCache 를 쓴다.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "signalist-test",
+    }
+}

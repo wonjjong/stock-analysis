@@ -15,6 +15,9 @@
     <a href="{% url 'archive' %}" {% if request.resolver_match.url_name == 'archive' %}class="on"{% endif %}>기사 아카이브</a>
     <a href="{% url 'providers' %}" {% if request.resolver_match.url_name == 'providers' %}class="on"{% endif %}>AI 공급자</a>
     <a href="{% url 'lab' %}" {% if request.resolver_match.url_name == 'lab' %}class="on"{% endif %}>분석실</a>
+    <a href="{% url 'stock_lab' %}" {% if request.resolver_match.url_name == 'stock_lab' %}class="on"{% endif %}>종목 AI 분석</a>
+    <a href="{% url 'rank_stocks' %}" {% if request.resolver_match.url_name == 'rank_stocks' %}class="on"{% endif %}>정량 랭킹</a>
+    <a href="{% url 'api_test' %}" {% if request.resolver_match.url_name == 'api_test' %}class="on"{% endif %}>API 테스트</a>
     <a href="/admin/" class="muted">운영</a>
   </nav>
 </header>
