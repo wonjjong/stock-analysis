@@ -58,7 +58,7 @@ def _status_chip(value: str) -> str:
 @admin.register(NewsSource)
 class NewsSourceAdmin(admin.ModelAdmin):
     list_display = (
-        "name", "category", "active_chip", "status_chip", "crawl_hour_kst",
+        "name", "category", "active_chip", "status_chip", "cadence",
         "window_hours", "max_pages", "article_count", "next_crawl_at", "last_error_short",
     )
     list_filter = ("is_active", "category", "last_status")
@@ -67,7 +67,7 @@ class NewsSourceAdmin(admin.ModelAdmin):
     # 운영자가 조정할 값만 편집 대상으로 둔다. 상태 필드는 파이프라인이 쓴다.
     fields = (
         "name", "url", "resolved_url", "category", "is_active",
-        "crawl_hour_kst", "window_hours", "max_pages",
+        "crawl_hour_kst", "crawl_interval_minutes", "window_hours", "max_pages",
         "last_status", "last_error", "last_crawled_at", "next_crawl_at",
         "etag", "last_modified", "created_at", "updated_at",
     )
@@ -87,6 +87,12 @@ class NewsSourceAdmin(admin.ModelAdmin):
     @admin.display(description="최근 상태", ordering="last_status")
     def status_chip(self, obj: NewsSource) -> str:
         return _status_chip(obj.last_status)
+
+    @admin.display(description="주기", ordering="crawl_interval_minutes")
+    def cadence(self, obj: NewsSource) -> str:
+        if obj.crawl_interval_minutes > 0:
+            return f"{obj.crawl_interval_minutes}분마다"
+        return f"매일 {obj.crawl_hour_kst:02d}:00 KST"
 
     @admin.display(description="기사", ordering="_articles")
     def article_count(self, obj: NewsSource) -> int:

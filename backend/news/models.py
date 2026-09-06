@@ -28,10 +28,15 @@ class NewsArticleManager(models.Manager):
     """`insert_ignore` 를 제공한다."""
 
     # 컬럼 순서를 한 곳에 둔다. published_date_kst 는 DB 생성 열이라 빠진다.
+    #
+    # insight_status 는 모델에 default 가 있지만 여기에 있어야 한다 — Django 의 default 는
+    # 파이썬 쪽 값이라 DDL 에 DEFAULT 를 만들지 않는다. 이 raw SQL 은 ORM 을 우회하므로
+    # 빼면 NOT NULL 위반으로 수집이 통째로 실패한다.
     _COLUMNS = (
         "source_id", "symbol", "title", "canonical_url", "excerpt", "published_at",
         "content_hash", "sentiment", "sentiment_score", "materiality", "relevance",
         "event_type", "score_adjustment", "analysis_summary", "collected_at",
+        "insight_status",
     )
 
     def insert_ignore(self, **values: object) -> int:
@@ -82,6 +87,9 @@ class NewsSource(models.Model):
     company = models.TextField()
     category = models.TextField(default="종합")
     crawl_hour_kst = models.IntegerField(default=6)
+    # 0 이면 하루 한 번(`crawl_hour_kst`), 양수면 그 분 주기로 돈다. 기본을 0 으로 둔 것은
+    # 기존 소스의 동작을 바꾸지 않기 위해서다.
+    crawl_interval_minutes = models.IntegerField(default=0)
     max_pages = models.IntegerField(default=1)
     window_hours = models.IntegerField(default=36)
     is_active = models.BooleanField(default=True)
