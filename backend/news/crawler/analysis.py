@@ -1,21 +1,4 @@
-"""
-규칙 기반 뉴스 분석. `app/lib/news-analysis.ts` 의 analyzeNewsLocally 이식.
-
-## 이식 함정 두 개
-
-1. **가변폭 lookbehind.** 원본은 `/(?<=[.!?。]|다\\.)\\s+/` 로 문장을 나눈다. 폭 1과 2의
-   교대라 Python `re` 가 `re.error` 로 거부한다. 고정폭 두 개
-   (`(?<=[.!?。])\\s+|(?<=다\\.)\\s+`)로 재구성하면 의미가 같다.
-
-   참고: 삭제된 `api/app/services/news_analysis.py` 는 이것을
-   `replace("다. ", "다.| ").split("|")` 로 우회했는데 **동등하지 않았다** — `.!?。` 경계를
-   놓치고 본문에 `|` 가 있으면 망가진다. 그래서 저장된 분석값을 실제로 생산한 TS 판을
-   정본으로 삼는다.
-
-2. **`Math.round` 의 반올림 방향.** JS 는 `.5` 를 +∞ 쪽으로 올린다. Python 의 `round()` 는
-   짝수로 붙인다(banker's rounding) — `round(-0.5)` 가 0, `round(2.5)` 가 2 다.
-   `floor(x + 0.5)` 로 JS 동작을 만든다.
-"""
+"""규칙 기반 뉴스 감성·중요도·사건 유형 분석."""
 
 from __future__ import annotations
 

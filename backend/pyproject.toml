@@ -62,8 +62,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # 마이그레이션은 Django 가 생성하는 형식이다. 손으로 다듬으면 makemigrations 가
 # 다시 덮어쓰거나 diff 가 생긴다.
 "news/migrations/*" = ["RUF012", "E501"]
-# rank_candidates 는 `api/` 프로토타입에서 **바이트 동일**하게 옮긴 것이다. 순수 stdlib
-# 로 완성된 팩터 알고리즘이고 테스트 2개가 붙어 있다. 형식을 다듬으면 원본과의 동일성이
-# 깨지고, 이 파일이 실제로 쓰이기 시작할 때(리서치 엔진) 리팩터링과 함께 정리한다.
+# 리서치 랭커는 순수 표준 라이브러리 모듈이며, 제품 기능으로 연결되기 전까지 현재 형식을
+# 유지한다.
 "research/recommendation.py" = ["E501", "E701", "E702"]
 "research/test_recommendation.py" = ["E501"]

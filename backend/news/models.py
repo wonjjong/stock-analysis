@@ -1,16 +1,4 @@
-"""
-뉴스 파이프라인 모델.
-
-## 스키마 소유자가 Django 로 넘어왔다
-
-이식 중에는 `managed = False` 로 두어 drizzle(`db/schema.ts`)이 스키마를 소유했다. 한
-테이블에 두 소유자를 두면 서로의 변경을 되돌리기 때문이다. TypeScript 를 삭제한 지금은
-Django 마이그레이션이 소유한다.
-
-이전 이력은 `--fake-initial` 로 맞췄다 — 테이블이 이미 존재하므로 첫 마이그레이션은
-"이미 적용됨"으로 기록만 하고 DDL 을 실행하지 않는다. SQLite 시절과 Postgres 전환기의
-drizzle 마이그레이션은 `docs/reference/` 에 보존돼 있다.
-"""
+"""뉴스 파이프라인의 Django 모델."""
 
 from __future__ import annotations
 
@@ -18,11 +6,8 @@ from django.contrib.postgres.indexes import GinIndex
 from django.db import connection, models
 from django.db.models.functions import Cast, Coalesce
 
-# drizzle 의 `serial` 은 32비트 integer 다. 프로젝트 기본값(BigAutoField)을 그대로 쓰면
-# 마이그레이션이 bigint 를 만들어 기존 DB 와 어긋나고, `--fake-initial` 이 실제와 다른
-# 스키마를 "적용됨"으로 기록해 거짓말이 된다. 기존 컬럼 타입에 맞춘다.
-#
-# 행 수가 21억에 근접하면 그때 bigint 로 올리는 별도 마이그레이션을 쓴다.
+# 기존 스키마와 일치하도록 32비트 정수 PK를 사용한다. 행 수가 21억에 근접하면 별도
+# 마이그레이션으로 bigint로 확장한다.
 
 class NewsArticleManager(models.Manager):
     """`insert_ignore` 를 제공한다."""
@@ -135,12 +120,7 @@ class NewsArticle(models.Model):
     score_adjustment = models.IntegerField()
     analysis_summary = models.TextField()
     collected_at = models.DateTimeField()
-    # DB 가 계산하는 생성 열이다. 앱이 쓰지 않는다.
-    #
-    # SQLite 시절에는 타임존을 아는 날짜 추출이 불가능해 앱이 직접 썼고, 빈 문자열로 남은
-    # 과거 행 때문에 조회 쪽에서 COALESCE 로 되살려야 했다. DB 가 계산하면 그 부류의 행이
-    # 아예 생기지 않는다.
-    #
+    # DB가 계산하는 생성 열이며 앱은 값을 쓰지 않는다.
     # STORED 생성 열은 IMMUTABLE 식을 요구한다. `timezone(text, timestamptz)` 는
     # pg_proc 에서 IMMUTABLE 이다(`timestamptz::date` 는 TimeZone GUC 를 읽어 STABLE 이라
     # 쓸 수 없다).

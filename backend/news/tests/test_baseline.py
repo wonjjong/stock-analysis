@@ -40,7 +40,7 @@ def test_date_baseline_includes_the_rejections(parity: dict) -> None:
 
 @pytest.mark.django_db
 def test_existing_tables_are_reachable() -> None:
-    """TypeScript 가 소유한 테이블을 Django 커넥션으로 읽을 수 있는지."""
+    """Django 커넥션으로 핵심 테이블을 읽을 수 있는지."""
     from django.db import connection
 
     with connection.cursor() as cursor:

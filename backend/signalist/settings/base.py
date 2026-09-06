@@ -1,9 +1,4 @@
-"""
-공통 설정. 환경별 파일(dev / prod / test)이 이 모듈을 확장한다.
-
-스키마 소유자는 Django 마이그레이션이다. 이식 중에는 drizzle 이 소유했고 모델이
-`managed = False` 였다 — 자세한 경위는 `news/models.py` 참고.
-"""
+"""공통 설정. 환경별 파일(dev / prod / test)이 이 모듈을 확장한다."""
 
 import os
 from pathlib import Path

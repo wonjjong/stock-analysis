@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="3368e07b-d509-4029-b93c-6bbedbb25582" name="변경" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/discord.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/stock-analyst.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/domains/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/domains/news/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/domains/research/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/policies/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/policies/architecture.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/policies/data-and-security.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/policies/operations.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/policies/quality.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/crawler/analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/crawler/analysis.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/crawler/fetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/crawler/fetcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/management/commands/crawl_news.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/management/commands/crawl_news.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/management/commands/run_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/management/commands/run_scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/migrations/0002_align_index_names.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/migrations/0003_add_django_side_indexes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/tests/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/tests/test_baseline.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/tests/test_baseline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/news/tests/test_parity_dates.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/news/tests/test_parity_dates.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/signalist/settings/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/signalist/settings/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/001_initial_pit_schema.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/0000_fancy_captain_universe.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/0001_pale_wendigo.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/0002_watery_mephistopheles.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/0003_dear_red_wolf.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/0004_heavy_tomas.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/meta/0000_snapshot.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/meta/0001_snapshot.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/meta/0002_snapshot.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/meta/0003_snapshot.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/meta/0004_snapshot.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/reference/drizzle-sqlite/meta/_journal.json" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_/Users/wonjjong/dev/stock-analyst" value="3IlyrXb1BsJkMIW0Lnky76rWFp8" />
+    </persistenceIdMap>
+  </component>
+  <component name="DjangoConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform))&#10;import django; print('Django %s' % django.get_version())&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;if 'setup' in dir(django): django.setup()&#10;import django_manage_shell; django_manage_shell.run(PROJECT_ROOT)">
+    <option name="myCustomStartScript" value="import sys; print('Python %s on %s' % (sys.version, sys.platform))&#10;import django; print('Django %s' % django.get_version())&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;if 'setup' in dir(django): django.setup()&#10;import django_manage_shell; django_manage_shell.run(PROJECT_ROOT)" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="105" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;wonjjong&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/wonjjong/stock-analysis.git&quot;,
+    &quot;accountId&quot;: &quot;86afa6e3-cd2a-4596-adde-30254e8b1864&quot;
+  }
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3IlyrXb1BsJkMIW0Lnky76rWFp8" />
+  <component name="ProjectViewState">
+    <option name="autoscrollToSource" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Django 서버.stock-analyst.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenDjangoStructureViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/wonjjong/dev/stock-analyst&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.other&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="stock-analyst" type="Python.DjangoServer" factoryName="Django server">
+      <module name="stock-analyst" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <option name="RUN_TOOL" value="" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <option name="port" value="8000" />
+      <option name="host" value="" />
+      <option name="additionalOptions" value="" />
+      <option name="browserUrl" value="" />
+      <option name="runTestServer" value="false" />
+      <option name="runNoReload" value="false" />
+      <option name="useCustomRunCommand" value="false" />
+      <option name="customRunCommand" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="디폴트 작업">
+      <changelist id="3368e07b-d509-4029-b93c-6bbedbb25582" name="변경" comment="" />
+      <created>1788353649547</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1788353649547</updated>
+      <workItem from="1788353651351" duration="16105000" />
+      <workItem from="1788702297687" duration="307000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

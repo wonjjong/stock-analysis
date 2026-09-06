@@ -1,1 +1,0 @@
-ALTER TABLE `news_sources` ADD `window_hours` integer DEFAULT 36 NOT NULL;

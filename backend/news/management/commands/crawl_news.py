@@ -1,4 +1,4 @@
-"""기한이 된 소스를 수집한다. Worker cron 과 `scripts/scheduler.mjs` 의 절반을 대체."""
+"""기한이 된 뉴스 소스를 수집한다."""
 
 from __future__ import annotations
 

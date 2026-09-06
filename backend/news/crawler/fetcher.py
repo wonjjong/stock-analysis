@@ -1,28 +1,4 @@
-"""
-HTTP 가져오기. `app/lib/news-crawler.ts` 의 readLimited / safeFetch /
-assertRobotsAllowed 이식.
-
-## 타임아웃 의미가 다르다
-
-TS 의 `AbortSignal.timeout(12_000)` 은 **전체 작업 데드라인**이다. httpx 의
-`Timeout(12.0)` 은 connect·read·write·pool 각 단계에 따로 걸린다. 응답을 느리게 흘리는
-서버는 phase 타임아웃만으로는 몇 분간 붙잡을 수 있으므로, 바깥에 데드라인을 둔다.
-
-## 인코딩을 고치지 않는다
-
-TS 는 `new TextDecoder()` 로 **charset 헤더를 무시하고 항상 UTF-8** 로 읽는다. 한국
-언론사가 EUC-KR/CP949 를 서브하면 제목이 mojibake 로 저장되는데, 그게 현재 D1/Postgres 에
-들어 있는 값이다. httpx 의 `response.text` 는 charset 을 감지해 **올바르게** 디코딩하므로
-제목이 바뀌고 content_hash 가 전부 달라진다.
-
-"이식판이 더 좋은 게 문제"인 사례다. 동일성을 먼저 통과시키고, 인코딩 수정은
-`NEWS_RESPECT_CHARSET` 을 켜는 **별도 변경**으로 백필과 함께 한다.
-
-## SSRF 가드를 강화하지 않는다
-
-DNS 해석 결과 검사와 IPv6 범위 검사는 원본에 없는 추가 방어다. 여기서 넣으면 동작이
-달라져 동일성 diff 를 해석할 수 없게 된다. 하드닝은 이식이 끝난 뒤 별도 작업으로.
-"""
+"""뉴스 목록 HTTP 요청, robots 확인, 리다이렉트와 응답 제한을 제공한다."""
 
 from __future__ import annotations
 
