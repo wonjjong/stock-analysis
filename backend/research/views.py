@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
-from dataclasses import asdict
-from datetime import UTC, datetime
 from typing import Any
 
 from asgiref.sync import async_to_sync, sync_to_async
@@ -15,14 +12,18 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from news.models import NewsArticle
-from research.analysis import Evidence, create_live_report, create_report
-from research.dart_profile import account_evidence, parse_single_account
+from research.analysis import Evidence
 from research.forms import ApiTestForm, StockLabForm, StockRankForm
+from research.lab_preview import build_lab_preview
 from research.macro import fetch_macro_regime
 from research.market_data import MarketDataError, fetch_market_snapshot
-from research.recommendation import Candidate, MacroRegime, rank_candidates
+from research.recommendation import (
+    Candidate,
+    MacroRegime,
+    rank_candidates,
+    scoring_policy,
+)
 from research.scoring import FactorScores, score_snapshot
-from research.sec_profile import build_filer_profile, profile_evidence
 from research.services import (
     CompanyIndexError,
     DartApiError,
@@ -32,13 +33,10 @@ from research.services import (
     resolve_kr_company,
     resolve_us_company,
 )
+from research.services.filings import fetch_filing_fundamentals
+from research.services.stock_analysis import analyze_live_stock, analyze_ranked_stock
 from research.stock_search import search_symbols
-from research.symbols import SymbolRoute, route_symbol
-
-logger = logging.getLogger(__name__)
-
-# 사업보고서 기준. DART 는 조회 연도의 보고서가 아직 없으면 013(데이터 없음)을 준다.
-DART_ANNUAL_REPORT = "11011"
+from research.symbols import route_symbol
 
 
 def _number(data: dict[str, Any], name: str, *, minimum: float | None = None) -> float:
@@ -89,32 +87,6 @@ def _regime(raw: object) -> MacroRegime:
     )
 
 
-def _news_evidence(symbol: str, limit: int = 10) -> list[Evidence]:
-    rows = (
-        NewsArticle.objects.filter(symbols__symbol=symbol)
-        .select_related("source", "insight")
-        .distinct()
-        .order_by("-published_at", "-id")[:limit]
-    )
-    evidence: list[Evidence] = []
-    for article in rows:
-        insight = getattr(article, "insight", None)
-        observed = article.published_at or article.collected_at
-        evidence.append(
-            Evidence(
-                id=f"news:{article.pk}",
-                kind="news",
-                title=article.title[:300],
-                source=article.source.name,
-                observed_at=observed.isoformat(),
-                available_at=article.collected_at.isoformat(),
-                summary=(insight.summary if insight else article.excerpt)[:800],
-                url=article.canonical_url,
-            )
-        )
-    return evidence
-
-
 def _sentiment_scores(symbol: str, limit: int = 20) -> list[int]:
     """종목에 붙은 최근 기사의 감성 점수. 뉴스 팩터의 재료다."""
     code = symbol.split(".")[0]
@@ -133,11 +105,18 @@ def _score_symbols(symbols: list[str]) -> tuple[list[FactorScores], list[dict[st
     for symbol in symbols:
         try:
             snapshot, _ = fetch_market_snapshot(symbol)
+            fundamentals = async_to_sync(fetch_filing_fundamentals)(
+                route_symbol(snapshot.symbol), snapshot.market_cap
+            )
         except MarketDataError as reason:
             failures.append({"symbol": symbol, "reason": str(reason)})
             continue
         scored.append(
-            score_snapshot(snapshot.as_dict(), sentiment_scores=_sentiment_scores(snapshot.symbol))
+            score_snapshot(
+                snapshot.as_dict(),
+                sentiment_scores=_sentiment_scores(snapshot.symbol),
+                fundamentals=fundamentals,
+            )
         )
     return scored, failures
 
@@ -161,9 +140,10 @@ def _rejection_reason(scores: FactorScores) -> str:
 def rank_stocks(request: HttpRequest):
     """여러 종목을 팩터 점수로 줄 세운다. 상위 종목은 AI 분석 화면으로 넘긴다."""
     ranked: list[dict[str, Any]] = []
-    coverage: dict[str, dict[str, int]] = {}
+    coverage: dict[str, dict[str, Any]] = {}
     failures: list[dict[str, str]] = []
     macro = None
+    score_policy = None
     form = StockRankForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         scored, failures = _score_symbols(form.cleaned_data["symbols"])
@@ -172,8 +152,17 @@ def rank_stocks(request: HttpRequest):
         else:
             macro = fetch_macro_regime()
             candidates = [item.as_candidate() for item in scored]
+            score_policy = scoring_policy(candidates)
             ranked = rank_candidates(candidates, macro.regime, len(candidates))
-            coverage = {item.symbol: item.coverage for item in scored}
+            coverage = {
+                item.symbol: {
+                    **item.coverage,
+                    "financial_source": " · ".join(
+                        part for part in (item.financial_source, item.financial_period) if part
+                    ),
+                }
+                for item in scored
+            }
             # rank_candidates 는 기준 미달 종목을 조용히 버린다. 사용자가 6개를 넣었는데
             # 2개만 보이는 이유를 알 수 있게, 빠진 종목과 사유를 함께 넘긴다.
             survived = {row["symbol"] for row in ranked}
@@ -197,6 +186,7 @@ def rank_stocks(request: HttpRequest):
             "coverage": coverage,
             "failures": failures,
             "macro": macro.as_dict() if macro else None,
+            "score_policy": score_policy.as_dict() if score_policy else None,
         },
     )
 
@@ -210,32 +200,6 @@ def stock_search(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"results": [choice.as_dict() for choice in search_symbols(query)]})
 
 
-def _filing_evidence(route: SymbolRoute) -> list[Evidence]:
-    """공시 근거를 붙인다. 시세는 필수지만 공시는 보조라 어떤 실패도 분석을 막지 않는다.
-
-    async_to_sync 는 여기서만 쓴다. WSGI 동기 뷰라 실행 중인 이벤트 루프가 없어 안전하고,
-    이 한 곳 덕분에 클라이언트에 동기 메서드를 복제하지 않아도 된다.
-    """
-    available_at = datetime.now(UTC).isoformat()
-    try:
-        if route.market == "US":
-            company = resolve_us_company(route.base)
-            submissions = async_to_sync(SecClient().get_company_submissions)(company.key)
-            return profile_evidence(build_filer_profile(submissions), available_at)
-
-        company = resolve_kr_company(route.base)
-        # 사업보고서는 이듬해 3월경 공시되므로 직전 연도를 조회한다.
-        year = str(datetime.now(UTC).year - 1)
-        payload = async_to_sync(DartClient().get_financial_statement)(
-            corp_code=company.key, year=year, reprt_code=DART_ANNUAL_REPORT
-        )
-        accounts = parse_single_account(payload)
-        return account_evidence(company, accounts, year, DART_ANNUAL_REPORT, available_at)
-    except (CompanyIndexError, DartApiError, SecApiError) as reason:
-        logger.info("공시 근거를 붙이지 못했습니다 (%s): %s", route.symbol, reason)
-        return []
-
-
 def stock_lab(request: HttpRequest):
     """임의 티커의 공개 시장 데이터를 수집하고 등록된 AI 공급자로 분석한다."""
     result = None
@@ -247,10 +211,8 @@ def stock_lab(request: HttpRequest):
     if request.method == "POST" and form.is_valid():
         symbol = form.cleaned_data["symbol"]
         try:
-            snapshot, evidence = fetch_market_snapshot(symbol)
-            evidence = [*evidence, *_filing_evidence(route_symbol(symbol))]
-            report, attempts = create_live_report(snapshot.as_dict(), evidence)
-            result = {"snapshot": snapshot, "report": report}
+            analysis = analyze_live_stock(symbol)
+            result, evidence, attempts = analysis["result"], analysis["evidence"], analysis["attempts"]
         except MarketDataError as reason:
             form.add_error("symbol", str(reason))
     return render(
@@ -261,6 +223,18 @@ def stock_lab(request: HttpRequest):
             "result": result,
             "evidence": evidence,
             "attempts": attempts,
+        },
+    )
+
+
+def stock_lab_preview(request: HttpRequest):
+    """AI·외부 데이터 호출 없이 분석실 결과 UI를 보여 준다."""
+    return render(
+        request,
+        "research/lab.html",
+        {
+            "form": StockLabForm(),
+            **build_lab_preview(),
         },
     )
 
@@ -340,25 +314,10 @@ def analyze_stock(request: HttpRequest, symbol: str) -> JsonResponse:
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as reason:
         return JsonResponse({"error": str(reason)}, status=400)
 
-    normalized_symbol = symbol.strip().upper()
-    recommendations = rank_candidates(candidates, regime, len(candidates))
-    recommendation = next((item for item in recommendations if item["symbol"] == normalized_symbol), None)
-    if recommendation is None:
+    try:
+        result = analyze_ranked_stock(symbol.strip().upper(), candidates, regime)
+    except MarketDataError as reason:
+        return JsonResponse({"error": str(reason)}, status=502)
+    if result is None:
         return JsonResponse({"error": "유동성·데이터 신선도 기준을 통과한 분석 대상이 아닙니다."}, status=422)
-
-    candidate = next(item for item in candidates if item.symbol == normalized_symbol)
-    evidence = _news_evidence(normalized_symbol)
-    report, attempts = create_report(
-        recommendation,
-        asdict(candidate),
-        asdict(regime),
-        evidence,
-    )
-    return JsonResponse(
-        {
-            "recommendation": recommendation,
-            "report": report.as_dict(),
-            "evidence": [asdict(item) for item in evidence],
-            "providerAttempts": attempts,
-        }
-    )
+    return JsonResponse(result)

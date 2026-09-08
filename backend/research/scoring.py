@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
+from research.fundamentals import FundamentalMetrics
 from research.recommendation import Candidate
 
 NEUTRAL = 50.0
@@ -91,7 +92,10 @@ class FactorScores:
     drawdown: float
     beta: float
     stale_ratio: float
+    news_observations: int
     coverage: dict[str, int] = field(default_factory=dict)
+    financial_source: str = "Yahoo Finance"
+    financial_period: str = ""
 
     def as_candidate(self) -> Candidate:
         return Candidate(
@@ -107,7 +111,23 @@ class FactorScores:
             drawdown=self.drawdown,
             beta=self.beta,
             stale_ratio=self.stale_ratio,
+            news_observations=self.news_observations,
         )
+
+    def as_ai_context(self) -> dict[str, float | int | str]:
+        """AI가 해석할 수 있는 정량 팩터와 공시 출처를 명시한다."""
+        return {
+            "quality": round(self.quality, 1),
+            "value": round(self.value, 1),
+            "momentum": round(self.momentum, 1),
+            "news": round(self.news, 1),
+            "newsObservations": self.news_observations,
+            "liquidity": round(self.liquidity, 1),
+            "drawdown": round(self.drawdown, 1),
+            "beta": round(self.beta, 2),
+            "financialSource": self.financial_source,
+            "financialPeriod": self.financial_period,
+        }
 
 
 def _number(value: object) -> float | None:
@@ -170,15 +190,18 @@ def score_snapshot(
     snapshot: dict[str, Any],
     *,
     sentiment_scores: list[int] | None = None,
+    fundamentals: FundamentalMetrics | None = None,
 ) -> FactorScores:
     """MarketSnapshot dict 를 팩터 점수 한 벌로 바꾼다.
 
     revisions(애널리스트 추정치 변화)는 공개 소스가 없어 항상 중립이다. rank_candidates 가
     횡단면 z-score 를 쓰므로, 모든 종목이 같은 값이면 기여가 0 이 되어 자연히 빠진다.
     """
-    momentum, momentum_filled = _factor(snapshot, MOMENTUM_CURVES)
-    value, value_filled = _factor(snapshot, VALUE_CURVES)
-    quality, quality_filled = _factor(snapshot, QUALITY_CURVES)
+    financial_inputs = fundamentals.score_inputs() if fundamentals else {}
+    factor_snapshot = {**snapshot, **financial_inputs}
+    momentum, momentum_filled = _factor(factor_snapshot, MOMENTUM_CURVES)
+    value, value_filled = _factor(factor_snapshot, VALUE_CURVES)
+    quality, quality_filled = _factor(factor_snapshot, QUALITY_CURVES)
     liquidity, liquidity_filled = _liquidity(snapshot)
     news, news_filled = news_score(sentiment_scores or [])
 
@@ -203,6 +226,7 @@ def score_snapshot(
         drawdown=drawdown,
         beta=_number(snapshot.get("beta")) or 1.0,
         stale_ratio=stale_ratio,
+        news_observations=news_filled,
         coverage={
             "momentum": momentum_filled,
             "value": value_filled,
@@ -211,4 +235,10 @@ def score_snapshot(
             "news": news_filled,
             "revisions": 0,
         },
+        financial_source=(fundamentals.source if financial_inputs and fundamentals else "Yahoo Finance"),
+        financial_period=(
+            fundamentals.period
+            if financial_inputs and fundamentals
+            else str(snapshot.get("financial_period") or "")
+        ),
     )

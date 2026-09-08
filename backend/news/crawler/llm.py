@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -19,6 +20,9 @@ DEFAULT_TIMEOUT_MS = 25_000
 MIN_TIMEOUT_MS = 5_000
 MAX_TIMEOUT_MS = 60_000
 KST_OFFSET = timedelta(hours=9)
+# 503·네트워크 오류는 Gemini 같은 외부 공급자의 순간 혼잡일 수 있다. 한 번의 실패로
+# 공급자를 쿨다운시키기 전에 같은 요청을 짧게 다시 보낸다.
+TRANSIENT_RETRY_DELAYS_SECONDS = (1.0, 2.0)
 
 _FENCED = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 _QUOTA_HINT = re.compile(r"quota|exhaust|limit|billing|credit", re.IGNORECASE)
@@ -130,58 +134,74 @@ def cooldown_until(kind: str, now: datetime) -> datetime:
 
 
 def llm_json(client: httpx.Client, config: LlmConfig, system: str, user: str) -> object:
-    """한 공급자에게 JSON 응답을 요구한다. 실패는 종류가 붙은 LlmError 로 올린다."""
-    try:
-        response = client.post(
-            f"{config.base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": config.model,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.2,
-            },
-            timeout=config.timeout_ms / 1000,
-        )
-    except httpx.TimeoutException as reason:
-        seconds = round(config.timeout_ms / 1000)
-        raise LlmError(
-            f"응답이 {seconds}초를 넘겨 끊었습니다.", FailureKind.TRANSIENT
-        ) from reason
-    except httpx.HTTPError as reason:
-        raise LlmError(str(reason) or "네트워크 오류", FailureKind.TRANSIENT) from reason
+    """한 공급자에게 JSON 응답을 요구한다.
 
-    if response.status_code >= 400:
-        detail = response.text[:300]
-        raise LlmError(
-            f"{response.status_code} {detail}",
-            classify_failure(response.status_code, detail),
-            response.status_code,
-        )
+    408·5xx·네트워크 오류는 같은 공급자에 짧은 지수 백오프 재시도를 한 뒤에만 호출자에게
+    전달한다. 인증·형식 오류는 재시도해도 해결되지 않으므로 즉시 전달한다.
+    """
+    for delay in (*TRANSIENT_RETRY_DELAYS_SECONDS, None):
+        try:
+            response = client.post(
+                f"{config.base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {config.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": config.model,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.2,
+                },
+                timeout=config.timeout_ms / 1000,
+            )
+            if response.status_code >= 400:
+                detail = response.text[:300]
+                raise LlmError(
+                    f"{response.status_code} {detail}",
+                    classify_failure(response.status_code, detail),
+                    response.status_code,
+                )
 
-    try:
-        payload = response.json()
-    except ValueError as reason:
-        raise LlmError(
-            "응답이 JSON 이 아닙니다.", FailureKind.REQUEST, response.status_code
-        ) from reason
+            try:
+                payload = response.json()
+            except ValueError as reason:
+                raise LlmError(
+                    "응답이 JSON 이 아닙니다.", FailureKind.REQUEST, response.status_code
+                ) from reason
 
-    choices = payload.get("choices") or []
-    content = (choices[0].get("message") or {}).get("content") if choices else None
-    if not content:
-        raise LlmError("응답에 본문이 없습니다.", FailureKind.REQUEST, response.status_code)
+            choices = payload.get("choices") or []
+            content = (choices[0].get("message") or {}).get("content") if choices else None
+            if not content:
+                raise LlmError(
+                    "응답에 본문이 없습니다.", FailureKind.REQUEST, response.status_code
+                )
 
-    try:
-        return extract_json(content)
-    except LlmError:
-        raise
-    except ValueError as reason:
-        raise LlmError(
-            f"JSON 해석 실패: {reason}", FailureKind.REQUEST, response.status_code
-        ) from reason
+            try:
+                return extract_json(content)
+            except LlmError:
+                raise
+            except ValueError as reason:
+                raise LlmError(
+                    f"JSON 해석 실패: {reason}", FailureKind.REQUEST, response.status_code
+                ) from reason
+        except httpx.TimeoutException as reason:
+            seconds = round(config.timeout_ms / 1000)
+            failure = LlmError(
+                f"응답이 {seconds}초를 넘겨 끊었습니다.", FailureKind.TRANSIENT
+            )
+            failure.__cause__ = reason
+        except httpx.HTTPError as reason:
+            failure = LlmError(str(reason) or "네트워크 오류", FailureKind.TRANSIENT)
+            failure.__cause__ = reason
+        except LlmError as reason:
+            failure = reason
+
+        if failure.kind != FailureKind.TRANSIENT or delay is None:
+            raise failure
+        time.sleep(delay)
+
+    raise AssertionError("재시도 루프를 빠져나왔습니다.")

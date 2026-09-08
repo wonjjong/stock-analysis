@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -15,6 +16,36 @@ from research.symbols import route_symbol, yfinance_candidates
 
 class MarketDataError(RuntimeError):
     """티커 데이터가 없거나 외부 데이터 공급자가 응답하지 않을 때 발생한다."""
+
+
+@dataclass(frozen=True, slots=True)
+class MovingAverages:
+    """종가 일봉에서 만든 단기·중기·장기 추세 기준선."""
+
+    ma_20: float | None
+    ma_60: float | None
+    ma_100: float | None
+    price_above_ma_20: bool | None
+    price_above_ma_60: bool | None
+    price_above_ma_100: bool | None
+    alignment: str
+
+
+@dataclass(frozen=True, slots=True)
+class PriceChartPoint:
+    """차트에만 쓰는 일별 종가와 이동평균 값.
+
+    AI 입력에는 넣지 않는다. 장기 가격 이력은 화면에서 검증할 수 있게 별도로 보관한다.
+    """
+
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    ma_20: float | None
+    ma_60: float | None
+    ma_100: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +66,8 @@ class MarketSnapshot:
     distance_from_high_pct: float | None
     volatility_20d_pct: float | None
     atr_20: float | None
+    moving_averages: MovingAverages
+    chart_points: tuple[PriceChartPoint, ...]
     max_drawdown_1y_pct: float | None
     avg_volume_20d: float | None
     beta: float | None
@@ -53,7 +86,10 @@ class MarketSnapshot:
     capital_expenditure: float | None
 
     def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        result = asdict(self)
+        # AI에는 요약 지표만 전달한다. 일별 가격 이력은 화면 차트 전용 데이터다.
+        del result["chart_points"]
+        return result
 
 
 def _finite(value: object) -> float | None:
@@ -93,6 +129,65 @@ def _period_return(closes: Any, sessions: int) -> float | None:
     if start in (None, 0) or end is None:
         return None
     return (end / start - 1) * 100
+
+
+def moving_averages(closes: Any, price: float) -> MovingAverages:
+    """최근 종가만으로 20·60·100일 이평과 배열 상태를 만든다."""
+    values = [number for value in closes if (number := _finite(value)) is not None]
+
+    def average(days: int) -> float | None:
+        if len(values) < days:
+            return None
+        return sum(values[-days:]) / days
+
+    ma_20, ma_60, ma_100 = average(20), average(60), average(100)
+    if ma_20 is None or ma_60 is None or ma_100 is None:
+        alignment = "이평 데이터 부족"
+    elif ma_20 > ma_60 > ma_100:
+        alignment = "정배열"
+    elif ma_20 < ma_60 < ma_100:
+        alignment = "역배열"
+    else:
+        alignment = "혼조"
+
+    return MovingAverages(
+        ma_20=ma_20,
+        ma_60=ma_60,
+        ma_100=ma_100,
+        price_above_ma_20=price > ma_20 if ma_20 is not None else None,
+        price_above_ma_60=price > ma_60 if ma_60 is not None else None,
+        price_above_ma_100=price > ma_100 if ma_100 is not None else None,
+        alignment=alignment,
+    )
+
+
+def price_chart_points(
+    rows: list[tuple[str, float, float, float, float]], limit: int = 120
+) -> tuple[PriceChartPoint, ...]:
+    """최근 일봉과 각 시점의 이평을 차트에 필요한 최소 형태로 자른다."""
+    daily = [row for row in rows if all(math.isfinite(value) for value in row[1:])]
+
+    def average(index: int, days: int) -> float | None:
+        if index + 1 < days:
+            return None
+        return sum(close for *_, close in daily[index - days + 1 : index + 1]) / days
+
+    start = max(0, len(daily) - limit)
+    return tuple(
+        PriceChartPoint(
+            date=date,
+            open=open_price,
+            high=high,
+            low=low,
+            close=close,
+            ma_20=average(index, 20),
+            ma_60=average(index, 60),
+            ma_100=average(index, 100),
+        )
+        for index, (date, open_price, high, low, close) in enumerate(
+            daily[start:], start=start
+        )
+    )
 
 
 def _latest_statement_value(frame: Any, labels: tuple[str, ...]) -> tuple[float | None, str]:
@@ -151,7 +246,12 @@ def _news_evidence(ticker: Any, available_at: str, limit: int = 8) -> list[Evide
         source = provider.get("displayName") if isinstance(provider, dict) else "Yahoo Finance"
         canonical = content.get("canonicalUrl")
         url = canonical.get("url") if isinstance(canonical, dict) else content.get("link") or ""
-        observed_at = str(content.get("pubDate") or content.get("providerPublishTime") or available_at)
+        raw_date = content.get("pubDate") or content.get("providerPublishTime")
+        try:
+            observed_at = (datetime.fromtimestamp(raw_date, UTC).isoformat()
+                           if isinstance(raw_date, (int, float)) else str(raw_date or ""))
+        except (ValueError, OverflowError, OSError):
+            observed_at = ""
         result.append(
             Evidence(
                 id=f"external-news:{content.get('id') or row.get('id') or len(result) + 1}",
@@ -189,7 +289,10 @@ def _load_ticker(candidates: tuple[str, ...]) -> tuple[str, Any, Any]:
     raise MarketDataError(f"{tried} 시세를 찾을 수 없습니다. 거래소 티커를 확인해 주세요.")
 
 
-def fetch_market_snapshot(symbol: str) -> tuple[MarketSnapshot, list[Evidence]]:
+def fetch_market_snapshot(
+    symbol: str, *, news_errors: list[str] | None = None,
+    news_loader: Callable[[Any, str], list[Evidence]] | None = None,
+) -> tuple[MarketSnapshot, list[Evidence]]:
     """Yahoo Finance 공개 데이터로 현재 스냅샷과 AI 입력 근거를 만든다."""
     route = route_symbol(symbol)
     available_at = datetime.now(UTC).isoformat()
@@ -197,9 +300,15 @@ def fetch_market_snapshot(symbol: str) -> tuple[MarketSnapshot, list[Evidence]]:
     try:
         info = ticker.info or {}
         financials, financial_period = _statement_values(ticker)
-        news = _news_evidence(ticker, available_at)
     except Exception as reason:
         raise MarketDataError(f"시장 데이터 조회에 실패했습니다: {reason}") from reason
+    try:
+        news = (news_loader(ticker, available_at) if news_loader
+                else _news_evidence(ticker, available_at, limit=50))
+    except Exception:
+        news = []
+        if news_errors is not None:
+            news_errors.append("Yahoo 종목 뉴스 조회 실패")
 
     closes = history["Close"].dropna()
     highs = history["High"].dropna()
@@ -219,6 +328,18 @@ def fetch_market_snapshot(symbol: str) -> tuple[MarketSnapshot, list[Evidence]]:
     high_52w = _finite(highs.max())
     distance_from_high = ((price / high_52w) - 1) * 100 if high_52w else None
     observed_at = history.index[-1].isoformat()
+    averages = moving_averages(closes, price)
+    chart_rows = [
+        (
+            index.isoformat() if hasattr(index, "isoformat") else str(index),
+            _finite(row.get("Open")) or _finite(row.get("Close")) or 0.0,
+            _finite(row.get("High")) or _finite(row.get("Close")) or 0.0,
+            _finite(row.get("Low")) or _finite(row.get("Close")) or 0.0,
+            _finite(row.get("Close")) or 0.0,
+        )
+        for index, row in history.iterrows()
+    ]
+    chart_points = price_chart_points(chart_rows)
 
     snapshot = MarketSnapshot(
         symbol=normalized,
@@ -237,6 +358,8 @@ def fetch_market_snapshot(symbol: str) -> tuple[MarketSnapshot, list[Evidence]]:
         distance_from_high_pct=distance_from_high,
         volatility_20d_pct=volatility,
         atr_20=atr,
+        moving_averages=averages,
+        chart_points=chart_points,
         max_drawdown_1y_pct=max_drawdown,
         avg_volume_20d=_finite(history["Volume"].tail(20).mean()),
         beta=_finite(info.get("beta")),
@@ -253,7 +376,8 @@ def fetch_market_snapshot(symbol: str) -> tuple[MarketSnapshot, list[Evidence]]:
         f"1개월 {snapshot.return_1m_pct}; 6개월 {snapshot.return_6m_pct}; "
         f"1년 {snapshot.return_1y_pct}; 20일 연환산 변동성 {snapshot.volatility_20d_pct}; "
         f"1년 최대 낙폭 {snapshot.max_drawdown_1y_pct}; 베타 {snapshot.beta}; "
-        f"시가총액 {snapshot.market_cap}."
+        f"시가총액 {snapshot.market_cap}; 20일선 {averages.ma_20}, 60일선 {averages.ma_60}, "
+        f"100일선 {averages.ma_100}; 이평 배열 {averages.alignment}."
     )
     financial_summary = "; ".join(
         f"{name}={value}" for name, value in financials.items() if value is not None

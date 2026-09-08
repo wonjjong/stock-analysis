@@ -115,6 +115,8 @@ CACHES = {
 # 리서치 데이터 공급자 설정
 SIGNALIST_DART_API_KEY = _env("SIGNALIST_DART_API_KEY")
 SIGNALIST_SEC_USER_AGENT = _env("SIGNALIST_SEC_USER_AGENT")
+SIGNALIST_NAVER_CLIENT_ID = _env("SIGNALIST_NAVER_CLIENT_ID")
+SIGNALIST_NAVER_CLIENT_SECRET = _env("SIGNALIST_NAVER_CLIENT_SECRET")
 
 # 저장은 항상 timestamptz, 표시·조회는 한국시간. published_date_kst 생성 열이
 # 'Asia/Seoul'로 계산하므로 서버 타임존에 의존하지 않는다.

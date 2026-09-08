@@ -1,4 +1,4 @@
-from research.analysis import Evidence, build_live_report, build_report
+from research.analysis import Evidence, build_live_report, build_report, create_live_report
 
 
 def _recommendation() -> dict:
@@ -69,3 +69,22 @@ def test_live_report_allows_only_known_stance_and_evidence_ids():
     assert report.evidence_ids == ["market:1"]
     assert report.engine == "Google Gemini"
     assert not hasattr(report, "target_price")
+
+
+def test_live_report_receives_quantitative_factors(monkeypatch):
+    captured = {}
+
+    class Chain:
+        parsed = None
+        provider_name = None
+        attempts = ()
+
+    def fake_chain(_prompt, payload):
+        captured["payload"] = payload
+        return Chain()
+
+    monkeypatch.setattr("news.services.llm.llm_json_with_failover", fake_chain)
+    create_live_report({"symbol": "005930.KS"}, [], {"quality": 80.0, "financialSource": "DART"})
+
+    assert '"quality": 80.0' in captured["payload"]
+    assert '"financialSource": "DART"' in captured["payload"]

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from research.analysis import Evidence
+from research.fundamentals import FundamentalMetrics
 from research.services.company_index import CompanyRef
 
 REPRT_CODES = {
@@ -62,6 +63,58 @@ def select_accounts(accounts: tuple[DartAccount, ...]) -> dict[str, DartAccount]
     for account in accounts:
         chosen.setdefault(account.account_name, account)
     return chosen
+
+
+def fundamentals_from_accounts(
+    accounts: tuple[DartAccount, ...], *, year: str, market_cap: float | None
+) -> FundamentalMetrics | None:
+    """DART 주요계정을 가치·퀄리티 팩터 입력으로 변환한다.
+
+    손익·자본은 연결재무제표를 우선한 ``select_accounts`` 결과를 쓴다. 적자와 자본잠식의
+    PER/PBR은 저평가로 오인하면 안 되므로 결측으로 남겨 보조 공급자가 채우게 한다.
+    """
+    selected = select_accounts(accounts)
+    revenue = selected.get("매출액")
+    net_income = selected.get("당기순이익")
+    equity = selected.get("자본총계")
+
+    revenue_current = revenue.current if revenue else None
+    revenue_previous = revenue.previous if revenue else None
+    net_income_current = net_income.current if net_income else None
+    equity_current = equity.current if equity else None
+
+    revenue_growth = (
+        (revenue_current / revenue_previous - 1) * 100
+        if revenue_current is not None and revenue_previous not in (None, 0)
+        else None
+    )
+    profit_margin = (
+        net_income_current / revenue_current * 100
+        if net_income_current is not None and revenue_current not in (None, 0)
+        else None
+    )
+    trailing_pe = (
+        market_cap / net_income_current
+        if market_cap is not None
+        and market_cap > 0
+        and net_income_current is not None
+        and net_income_current > 0
+        else None
+    )
+    price_to_book = (
+        market_cap / equity_current
+        if market_cap is not None and market_cap > 0 and equity_current is not None and equity_current > 0
+        else None
+    )
+    metrics = FundamentalMetrics(
+        source="DART",
+        period=f"{year}-12-31",
+        trailing_pe=trailing_pe,
+        price_to_book=price_to_book,
+        profit_margin_pct=profit_margin,
+        revenue_growth_pct=revenue_growth,
+    )
+    return metrics if metrics.score_inputs() else None
 
 
 def account_evidence(

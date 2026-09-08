@@ -97,6 +97,7 @@ news/crawler: URL·날짜·피드·HTML·본문·규칙 분석·LLM 응답 검�
 | `SIGNALIST_LLM_TIMEOUT_MS` | LLM 요청 제한 시간(5~60초) |
 | `SIGNALIST_DART_API_KEY` | Open DART 공시 조회 키 |
 | `SIGNALIST_SEC_USER_AGENT` | SEC EDGAR 요청용 `이름 이메일` 식별자 |
+| `SIGNALIST_NAVER_CLIENT_ID` / `SIGNALIST_NAVER_CLIENT_SECRET` | 국내 종목 뉴스 검색용 네이버 애플리케이션 키 |
 | `SIGNALIST_KIS_APP_KEY` / `SIGNALIST_KIS_APP_SECRET` | 한국투자증권 시세·수급 조회 키 |
 | `SIGNALIST_CACHE_URL` | 리서치 인덱스 공유 캐시 URL(선택) |
 

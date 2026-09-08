@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-from research.dart_profile import account_evidence, parse_single_account, select_accounts
-from research.sec_profile import build_filer_profile, profile_evidence
+from research.dart_profile import (
+    account_evidence,
+    fundamentals_from_accounts,
+    parse_single_account,
+    select_accounts,
+)
+from research.sec_profile import build_filer_profile, fundamentals_from_company_facts, profile_evidence
 from research.services.company_index import CompanyRef
 
 
@@ -108,6 +113,47 @@ def test_empty_submissions_do_not_crash():
     assert profile.recent_filings == ()
 
 
+def test_sec_company_facts_become_common_fundamental_metrics():
+    payload = {
+        "facts": {
+            "us-gaap": {
+                "RevenueFromContractWithCustomerExcludingAssessedTax": {
+                    "units": {
+                        "USD": [
+                            {"form": "10-K", "end": "2025-09-27", "filed": "2025-11-01", "val": 2000},
+                            {"form": "10-K", "end": "2024-09-28", "filed": "2024-11-01", "val": 1600},
+                        ]
+                    }
+                },
+                "NetIncomeLoss": {
+                    "units": {
+                        "USD": [
+                            {"form": "10-K", "end": "2025-09-27", "filed": "2025-11-01", "val": 200}
+                        ]
+                    }
+                },
+                "StockholdersEquity": {
+                    "units": {
+                        "USD": [
+                            {"form": "10-K", "end": "2025-09-27", "filed": "2025-11-01", "val": 1000}
+                        ]
+                    }
+                },
+            }
+        }
+    }
+
+    metrics = fundamentals_from_company_facts(payload, market_cap=4_000)
+
+    assert metrics is not None
+    assert metrics.source == "SEC EDGAR"
+    assert metrics.period == "2025-09-27"
+    assert metrics.revenue_growth_pct == 25
+    assert metrics.profit_margin_pct == 10
+    assert metrics.trailing_pe == 20
+    assert metrics.price_to_book == 4
+
+
 # --- DART ---
 
 DART_PAYLOAD = {
@@ -140,6 +186,26 @@ def test_account_evidence_summarises_key_lines():
 def test_empty_dart_payload_yields_no_evidence():
     company = CompanyRef(market="KR", key="00126380", ticker="005930", name="삼성전자")
     assert account_evidence(company, parse_single_account({}), "2023", "11011", "now") == []
+
+
+def test_dart_accounts_become_value_and_quality_inputs():
+    payload = {
+        "list": [
+            {"account_nm": "매출액", "fs_div": "CFS", "thstrm_amount": "2,000", "frmtrm_amount": "1,600"},
+            {"account_nm": "당기순이익", "fs_div": "CFS", "thstrm_amount": "200", "frmtrm_amount": "150"},
+            {"account_nm": "자본총계", "fs_div": "CFS", "thstrm_amount": "1,000", "frmtrm_amount": "900"},
+        ]
+    }
+
+    metrics = fundamentals_from_accounts(parse_single_account(payload), year="2025", market_cap=4_000)
+
+    assert metrics is not None
+    assert metrics.source == "DART"
+    assert metrics.period == "2025-12-31"
+    assert metrics.revenue_growth_pct == 25
+    assert metrics.profit_margin_pct == 10
+    assert metrics.trailing_pe == 20
+    assert metrics.price_to_book == 4
 
 
 def test_profile_without_annual_report_anchors_on_the_latest_filing():

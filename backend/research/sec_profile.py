@@ -1,10 +1,8 @@
-"""SEC submissions 응답을 발행사 프로필과 AI 입력 근거로 바꾼다.
+"""SEC 응답을 발행사 프로필·재무 팩터·AI 입력 근거로 바꾼다.
 
-## companyfacts 를 여기서 쓰지 않는 이유
-IREN(CIK 1878848)의 companyfacts 는 ifrs-full 202개와 us-gaap 340개가 섞여 있고, 최근
-공시에 10-K/10-Q 가 아예 없다(6-K 123건). us-gaap 만 파싱하면 IFRS 로 보고하던 시기가
-'0' 이 아니라 '없음' 으로 비어 리포트가 무이익으로 오독한다. 재무 수치는 taxonomy 를
-명시적으로 다루는 모듈이 생길 때까지 여기서 만들지 않는다.
+companyfacts 는 us-gaap와 ifrs-full이 섞일 수 있다. 그래서 특정 taxonomy 하나를 전제하지
+않고, 공통 의미의 개념 후보를 순서대로 찾은 뒤 연차보고서(10-K·20-F·40-F) 값만 쓴다.
+개념을 찾지 못하면 0점으로 지어내지 않고 결측으로 남긴다.
 
 ## 기준일을 둘로 나눈다
 공시는 사건 시점(periodOfReport)과 알 수 있게 된 시점(filingDate)이 다르다. 이 프로젝트의
@@ -19,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from research.analysis import Evidence
+from research.fundamentals import FundamentalMetrics
 
 # 연차 보고서: 미국 내국법인 10-K, 미국 기준 외국법인(FPI) 20-F, 캐나다 MJDS 40-F
 ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"})
@@ -42,6 +41,29 @@ US_STATE_CODES = frozenset({
 })
 
 ARCHIVE_BASE = "https://www.sec.gov/Archives/edgar/data"
+
+REVENUE_CONCEPTS = (
+    ("us-gaap", "RevenueFromContractWithCustomerExcludingAssessedTax"),
+    ("us-gaap", "SalesRevenueNet"),
+    ("us-gaap", "Revenues"),
+    ("ifrs-full", "Revenue"),
+)
+NET_INCOME_CONCEPTS = (
+    ("us-gaap", "NetIncomeLoss"),
+    ("ifrs-full", "ProfitLoss"),
+)
+EQUITY_CONCEPTS = (
+    ("us-gaap", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"),
+    ("us-gaap", "StockholdersEquity"),
+    ("ifrs-full", "Equity"),
+)
+
+
+@dataclass(frozen=True, slots=True)
+class AnnualFact:
+    value: float
+    period: str
+    filed_at: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +102,121 @@ class FilerProfile:
     def changed_regime(self) -> bool:
         """보고 양식을 갈아탔는가. 갈아탔다면 과거 XBRL taxonomy 도 함께 바뀌었을 수 있다."""
         return self.previous_regime not in (UNKNOWN_REGIME, self.reporting_regime)
+
+
+def _annual_facts(payload: dict[str, Any], concepts: tuple[tuple[str, str], ...]) -> tuple[AnnualFact, ...]:
+    """동일 개념·통화 단위의 연차 팩트를 최신 순으로 찾는다."""
+    facts = payload.get("facts")
+    if not isinstance(facts, dict):
+        return ()
+    for taxonomy, concept in concepts:
+        concepts_by_name = facts.get(taxonomy)
+        if not isinstance(concepts_by_name, dict):
+            continue
+        raw_concept = concepts_by_name.get(concept)
+        if not isinstance(raw_concept, dict):
+            continue
+        units = raw_concept.get("units")
+        if not isinstance(units, dict):
+            continue
+        for rows in units.values():
+            if not isinstance(rows, list):
+                continue
+            result: dict[str, AnnualFact] = {}
+            for row in rows:
+                if not isinstance(row, dict) or str(row.get("form") or "") not in ANNUAL_FORMS:
+                    continue
+                try:
+                    value = float(row["val"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                period = str(row.get("end") or "")
+                filed_at = str(row.get("filed") or "")
+                if not period or not filed_at:
+                    continue
+                previous = result.get(period)
+                if previous is None or filed_at > previous.filed_at:
+                    result[period] = AnnualFact(value=value, period=period, filed_at=filed_at)
+            if result:
+                return tuple(sorted(result.values(), key=lambda item: item.period, reverse=True))
+    return ()
+
+
+def fundamentals_from_company_facts(
+    payload: dict[str, Any], *, market_cap: float | None
+) -> FundamentalMetrics | None:
+    """SEC companyfacts의 최근 연차 재무제표를 공통 팩터 입력값으로 정규화한다."""
+    revenues = _annual_facts(payload, REVENUE_CONCEPTS)
+    incomes = _annual_facts(payload, NET_INCOME_CONCEPTS)
+    equities = _annual_facts(payload, EQUITY_CONCEPTS)
+    current_revenue = revenues[0] if revenues else None
+    previous_revenue = revenues[1] if len(revenues) > 1 else None
+    current_income = next(
+        (item for item in incomes if current_revenue is not None and item.period == current_revenue.period),
+        incomes[0] if incomes else None,
+    )
+    current_equity = next(
+        (item for item in equities if current_revenue is not None and item.period == current_revenue.period),
+        equities[0] if equities else None,
+    )
+
+    revenue_growth = (
+        (current_revenue.value / previous_revenue.value - 1) * 100
+        if current_revenue is not None and previous_revenue is not None and previous_revenue.value != 0
+        else None
+    )
+    profit_margin = (
+        current_income.value / current_revenue.value * 100
+        if current_income is not None and current_revenue is not None and current_revenue.value != 0
+        else None
+    )
+    trailing_pe = (
+        market_cap / current_income.value
+        if market_cap is not None
+        and market_cap > 0
+        and current_income is not None
+        and current_income.value > 0
+        else None
+    )
+    price_to_book = (
+        market_cap / current_equity.value
+        if market_cap is not None
+        and market_cap > 0
+        and current_equity is not None
+        and current_equity.value > 0
+        else None
+    )
+    period = current_revenue.period if current_revenue is not None else ""
+    metrics = FundamentalMetrics(
+        source="SEC EDGAR",
+        period=period,
+        trailing_pe=trailing_pe,
+        price_to_book=price_to_book,
+        profit_margin_pct=profit_margin,
+        revenue_growth_pct=revenue_growth,
+    )
+    return metrics if metrics.score_inputs() else None
+
+
+def financial_evidence(metrics: FundamentalMetrics, available_at: str) -> Evidence:
+    """수치화된 SEC 재무제표가 AI 근거 목록에서도 보이게 한다."""
+    parts = [
+        f"매출성장률 {metrics.revenue_growth_pct:.1f}%"
+        if metrics.revenue_growth_pct is not None
+        else "",
+        f"순이익률 {metrics.profit_margin_pct:.1f}%" if metrics.profit_margin_pct is not None else "",
+        f"PER {metrics.trailing_pe:.1f}" if metrics.trailing_pe is not None else "",
+        f"PBR {metrics.price_to_book:.1f}" if metrics.price_to_book is not None else "",
+    ]
+    return Evidence(
+        id=f"sec:annual-financials:{metrics.period}",
+        kind="financial",
+        title=f"SEC EDGAR {metrics.period} 연차 재무 팩터",
+        source="SEC EDGAR",
+        observed_at=metrics.period,
+        available_at=available_at,
+        summary="; ".join(part for part in parts if part),
+    )
 
 
 def _classify_regime(forms: set[str]) -> str:

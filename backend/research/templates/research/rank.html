@@ -39,6 +39,18 @@
 {% if not macro.sources.credit_spread %}
 <p class="help" style="margin-bottom:16px">신용스프레드는 무료 데이터 소스가 없어 국면 계산에 반영되지 않았습니다.</p>
 {% endif %}
+
+{% if score_policy %}
+<section class="panel" style="margin-bottom:16px">
+  <h2>뉴스 팩터 상태</h2>
+  {% if score_policy.newsEnabled %}
+  <p class="ok">뉴스 반영 중 · 후보군 뉴스 커버리지 {{ score_policy.newsCoveragePercent }}%</p>
+  {% else %}
+  <p class="dim">뉴스 데이터 축적 중 — 이번 랭킹에서는 뉴스 점수 10%를 제외했습니다.</p>
+  <p class="help">뉴스가 있는 종목만 유리해지지 않도록, 후보군의 60% 이상에 분석 뉴스가 쌓일 때 자동 반영합니다.</p>
+  {% endif %}
+</section>
+{% endif %}
 {% endif %}
 
 {% if ranked %}
@@ -84,7 +96,8 @@
   {% for symbol, counts in coverage.items %}
   <p><strong>{{ symbol }}</strong>
     <span class="dim">모멘텀 {{ counts.momentum }} · 가치 {{ counts.value }} · 퀄리티 {{ counts.quality }}
-      · 유동성 {{ counts.liquidity }} · 뉴스 {{ counts.news }} · 추정치 {{ counts.revisions }}</span></p>
+      · 유동성 {{ counts.liquidity }} · 뉴스 {{ counts.news }} · 추정치 {{ counts.revisions }}
+      · 재무 {{ counts.financial_source }}</span></p>
   {% endfor %}
 </section>
 {% endif %}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from research.fundamentals import FundamentalMetrics
 from research.scoring import (
     CORE_INPUTS,
     NEUTRAL,
@@ -59,6 +60,24 @@ def test_cheap_stock_scores_higher_on_value():
     assert cheap.value > rich.value
 
 
+def test_dart_financials_override_market_financials_but_not_price_history():
+    dart = FundamentalMetrics(
+        source="DART",
+        period="2025-12-31",
+        trailing_pe=6,
+        price_to_book=0.6,
+        profit_margin_pct=22,
+        revenue_growth_pct=24,
+    )
+
+    scores = score_snapshot({**FULL, "trailing_pe": 55, "price_to_book": 9}, fundamentals=dart)
+
+    assert scores.financial_source == "DART"
+    assert scores.financial_period == "2025-12-31"
+    assert scores.value > 90
+    assert scores.quality > score_snapshot(FULL).quality
+
+
 def test_same_turnover_number_scores_lower_in_won():
     """원화와 달러는 자릿수가 1,000배 넘게 다르다. 거래대금 1억은 달러면 크고 원화면 작다."""
     krw = score_snapshot({**FULL, "currency": "KRW", "price": 100.0, "avg_volume_20d": 1e6})
@@ -90,6 +109,14 @@ def test_stale_ratio_rises_when_price_history_is_missing():
 def test_news_score_averages_sentiment_and_is_neutral_without_articles():
     assert news_score([80, 60]) == (70.0, 2)
     assert news_score([]) == (NEUTRAL, 0)
+
+
+def test_news_observation_count_is_carried_to_the_ranker_and_ai_context():
+    scores = score_snapshot(FULL, sentiment_scores=[80, 60])
+
+    assert scores.news_observations == 2
+    assert scores.as_candidate().news_observations == 2
+    assert scores.as_ai_context()["newsObservations"] == 2
 
 
 def test_revisions_stay_neutral_because_no_public_source_exists():

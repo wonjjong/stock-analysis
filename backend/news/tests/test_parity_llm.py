@@ -13,10 +13,12 @@ import pytest
 
 from news.crawler.llm import (
     FailureKind,
+    LlmConfig,
     LlmError,
     classify_failure,
     cooldown_until,
     extract_json,
+    llm_json,
     timeout_ms,
 )
 
@@ -101,3 +103,43 @@ def test_timeout_is_clamped(monkeypatch: pytest.MonkeyPatch) -> None:
     assert timeout_ms() == 25_000
     monkeypatch.delenv("SIGNALIST_LLM_TIMEOUT_MS")
     assert timeout_ms() == 25_000
+
+
+class _Response:
+    def __init__(self, status_code: int, text: str, payload: object | None = None) -> None:
+        self.status_code = status_code
+        self.text = text
+        self._payload = payload
+
+    def json(self) -> object:
+        return self._payload
+
+
+class _Client:
+    def __init__(self, responses: list[_Response]) -> None:
+        self.responses = responses
+        self.calls = 0
+
+    def post(self, *_: object, **__: object) -> _Response:
+        response = self.responses[self.calls]
+        self.calls += 1
+        return response
+
+
+def test_llm_json_retries_a_transient_response_before_failing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _Client([
+        _Response(503, "temporary overload"),
+        _Response(200, "", {"choices": [{"message": {"content": '{"ok": true}'}}]}),
+    ])
+    delays: list[float] = []
+    monkeypatch.setattr("news.crawler.llm.time.sleep", delays.append)
+
+    parsed = llm_json(
+        client, LlmConfig("https://example.test", "key", "model", 5_000), "system", "user"
+    )
+
+    assert parsed == {"ok": True}
+    assert client.calls == 2
+    assert delays == [1.0]

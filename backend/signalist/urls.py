@@ -20,6 +20,7 @@ urlpatterns = [
     ),
     path("news/lab", views.lab, name="lab"),
     path("research/lab", research_views.stock_lab, name="stock_lab"),
+    path("research/lab/preview", research_views.stock_lab_preview, name="stock_lab_preview"),
     path("api/research/stocks/search", research_views.stock_search, name="stock_search"),
     path("research/rank", research_views.rank_stocks, name="rank_stocks"),
     path("research/api-test", research_views.api_test, name="api_test"),
