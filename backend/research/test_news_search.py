@@ -58,7 +58,7 @@ def test_naver_missing_credentials_no_request(settings, query):
 
 def test_gdelt_query_and_seen_date(query):
     def respond(request):
-        assert request.url.params["maxrecords"] == "50"
+        assert request.url.params["maxrecords"] == "12"
         assert request.url.params["startdatetime"] == "20260808000000"
         assert request.url.params["query"] == '("Test Company" OR "Test Incorporated" OR "TESTX")'
         return httpx.Response(200, json={"articles": [{
@@ -95,6 +95,16 @@ def test_timeout_is_provider_error(query):
     with (
         httpx.Client(transport=httpx.MockTransport(respond)) as client,
         pytest.raises(NewsSearchError, match="시간 초과"),
+    ):
+        GdeltNewsSearch(client).search(query)
+
+
+def test_gdelt_rate_limit_includes_provider_cause(query, monkeypatch):
+    monkeypatch.setattr("research.services.news_search.time.sleep", lambda _: None)
+    response = httpx.Response(429, text="Please limit requests to one every 5 seconds.")
+    with (
+        httpx.Client(transport=httpx.MockTransport(lambda request: response)) as client,
+        pytest.raises(NewsSearchError, match="요청 빈도 제한"),
     ):
         GdeltNewsSearch(client).search(query)
 

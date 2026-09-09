@@ -37,6 +37,20 @@ from research.services.filings import fetch_filing_fundamentals
 from research.services.stock_analysis import analyze_live_stock, analyze_ranked_stock
 from research.stock_search import search_symbols
 from research.symbols import route_symbol
+from research.valuation import calculate_valuation
+
+
+@require_POST
+def valuation_scenario(request: HttpRequest):
+    """CSRF 보호된 순수 계산 경로. 데이터 수집과 AI 호출은 하지 않는다."""
+    try:
+        payload = json.loads(request.body)
+        if not isinstance(payload, dict):
+            raise ValueError("JSON 객체가 필요합니다.")
+        result = calculate_valuation(payload.get("inputs"), payload.get("assumptions"))
+    except (ValueError, TypeError, UnicodeDecodeError) as reason:
+        return JsonResponse({"error": str(reason)}, status=400)
+    return JsonResponse(result)
 
 
 def _number(data: dict[str, Any], name: str, *, minimum: float | None = None) -> float:

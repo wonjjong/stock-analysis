@@ -22,10 +22,11 @@ MAX_TIMEOUT_MS = 60_000
 KST_OFFSET = timedelta(hours=9)
 # 503·네트워크 오류는 Gemini 같은 외부 공급자의 순간 혼잡일 수 있다. 한 번의 실패로
 # 공급자를 쿨다운시키기 전에 같은 요청을 짧게 다시 보낸다.
-TRANSIENT_RETRY_DELAYS_SECONDS = (1.0, 2.0)
+TRANSIENT_RETRY_DELAYS_SECONDS = (1.0, 2.0, 4.0)
 
 _FENCED = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 _QUOTA_HINT = re.compile(r"quota|exhaust|limit|billing|credit", re.IGNORECASE)
+_DAILY_QUOTA_HINT = re.compile(r"per.?day|requests?.?per.?day|tokens?.?per.?day|rpd|daily", re.IGNORECASE)
 
 
 class FailureKind:
@@ -64,14 +65,10 @@ def timeout_ms() -> int:
 
 def env_config() -> LlmConfig | None:
     """DB 에 공급자가 하나도 없을 때만 쓰는 환경변수 폴백."""
-    api_key = os.environ.get("SIGNALIST_LLM_API_KEY") or os.environ.get(
-        "SIGNALIST_OPENAI_API_KEY"
-    )
+    api_key = os.environ.get("SIGNALIST_LLM_API_KEY") or os.environ.get("SIGNALIST_OPENAI_API_KEY")
     if not api_key:
         return None
-    base_url = (
-        os.environ.get("SIGNALIST_LLM_BASE_URL") or "https://api.openai.com/v1"
-    ).rstrip("/")
+    base_url = (os.environ.get("SIGNALIST_LLM_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
     model = (
         os.environ.get("SIGNALIST_LLM_MODEL")
         or os.environ.get("SIGNALIST_OPENAI_NEWS_MODEL")
@@ -121,9 +118,7 @@ def cooldown_until(kind: str, now: datetime) -> datetime:
     """
     if kind == FailureKind.QUOTA:
         kst = now + KST_OFFSET
-        next_kst_midnight = datetime(
-            kst.year, kst.month, kst.day, tzinfo=UTC
-        ) + timedelta(days=1)
+        next_kst_midnight = datetime(kst.year, kst.month, kst.day, tzinfo=UTC) + timedelta(days=1)
         midnight = next_kst_midnight - KST_OFFSET
         return min(midnight, now + timedelta(hours=1))
     if kind == FailureKind.AUTH:
@@ -141,25 +136,31 @@ def llm_json(client: httpx.Client, config: LlmConfig, system: str, user: str) ->
     """
     for delay in (*TRANSIENT_RETRY_DELAYS_SECONDS, None):
         try:
+            request = {
+                "model": config.model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+            }
+            # Gemini 3 Flash의 기본 사고 수준은 medium이다. 이 구조화 해석은 low로도
+            # 충분하며 무료 티어의 사고/출력 토큰 소모와 429 가능성을 줄인다.
+            if "generativelanguage.googleapis.com" in config.base_url:
+                request["reasoning_effort"] = "low"
             response = client.post(
                 f"{config.base_url}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {config.api_key}",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": config.model,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.2,
-                },
+                json=request,
                 timeout=config.timeout_ms / 1000,
             )
             if response.status_code >= 400:
-                detail = response.text[:300]
+                # Gemini의 quota metric·retryDelay가 오류 본문 뒤쪽에 올 수 있다.
+                detail = response.text[:1000]
                 raise LlmError(
                     f"{response.status_code} {detail}",
                     classify_failure(response.status_code, detail),
@@ -176,9 +177,7 @@ def llm_json(client: httpx.Client, config: LlmConfig, system: str, user: str) ->
             choices = payload.get("choices") or []
             content = (choices[0].get("message") or {}).get("content") if choices else None
             if not content:
-                raise LlmError(
-                    "응답에 본문이 없습니다.", FailureKind.REQUEST, response.status_code
-                )
+                raise LlmError("응답에 본문이 없습니다.", FailureKind.REQUEST, response.status_code)
 
             try:
                 return extract_json(content)
@@ -190,9 +189,7 @@ def llm_json(client: httpx.Client, config: LlmConfig, system: str, user: str) ->
                 ) from reason
         except httpx.TimeoutException as reason:
             seconds = round(config.timeout_ms / 1000)
-            failure = LlmError(
-                f"응답이 {seconds}초를 넘겨 끊었습니다.", FailureKind.TRANSIENT
-            )
+            failure = LlmError(f"응답이 {seconds}초를 넘겨 끊었습니다.", FailureKind.TRANSIENT)
             failure.__cause__ = reason
         except httpx.HTTPError as reason:
             failure = LlmError(str(reason) or "네트워크 오류", FailureKind.TRANSIENT)
@@ -200,7 +197,8 @@ def llm_json(client: httpx.Client, config: LlmConfig, system: str, user: str) ->
         except LlmError as reason:
             failure = reason
 
-        if failure.kind != FailureKind.TRANSIENT or delay is None:
+        retryable_quota = failure.status == 429 and not _DAILY_QUOTA_HINT.search(str(failure))
+        if (failure.kind != FailureKind.TRANSIENT and not retryable_quota) or delay is None:
             raise failure
         time.sleep(delay)
 

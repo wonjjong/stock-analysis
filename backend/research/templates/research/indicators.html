@@ -1,0 +1,182 @@
+<style>
+#stock-indicators .metric-grid, #valuation-panel .assumption-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px; }
+#stock-indicators .metric { border:1px solid var(--line,#334155);border-radius:8px;padding:14px;min-width:0; }
+#stock-indicators .metric-value { display:block;font-size:clamp(15px,4.8vw,22px);line-height:1.35;margin:8px 0;overflow-wrap:anywhere;white-space:normal; }
+#stock-indicators details, #valuation-panel details { font-size:12px;line-height:1.7;overflow-wrap:anywhere; }
+#stock-indicators summary, #valuation-panel summary { cursor:pointer;color:var(--mint,#66f0b2); }
+#stock-indicators summary:focus-visible, #valuation-panel summary:focus-visible { outline:2px solid currentColor;outline-offset:4px; }
+#stock-indicators dl, #valuation-panel dl { margin:8px 0; }
+#stock-indicators dd, #valuation-panel dd { margin:0 0 8px; }
+#valuation-panel fieldset { border:1px solid var(--line,#334155);border-radius:8px;margin:14px 0;padding:14px;min-width:0; }
+#valuation-panel label { display:block; }
+#valuation-panel input { display:block;width:100%;box-sizing:border-box;margin-top:6px; }
+#valuation-results .valuation-method { border-top:1px solid var(--line,#334155);padding:12px 0; }
+</style>
+
+<section id="stock-indicators" class="panel" style="margin-bottom:16px" aria-labelledby="stock-indicators-title">
+  <h2 id="stock-indicators-title">종목 지표 살펴보기</h2>
+  <p class="dim">각 지표의 ‘용어·계산 기준’을 눌러 의미, 계산식, 출처와 기준 기간을 확인하세요.</p>
+  {% for group in result.indicators.groups %}
+  <h3>{{ group.name }}</h3>
+  <div class="metric-grid">
+    {% for metric in group.metrics %}
+    <article class="metric">
+      <strong>{{ metric.label }}</strong>
+      {% if metric.value != None %}
+      <strong class="metric-value num">{{ metric.value|floatformat:"2g" }} {{ metric.unit }}</strong>
+      {% else %}
+      <strong class="metric-value dim">자료 부족</strong>
+      <p class="help">{{ metric.missing_reason|default:"계산에 필요한 자료가 제공되지 않았습니다." }}</p>
+      {% endif %}
+      <details>
+        <summary><span class="sr-only">{{ metric.label }} </span>용어·계산 기준</summary>
+        <p>{{ metric.description }}</p>
+        <dl>
+          <dt>계산식</dt><dd>{{ metric.formula }}</dd>
+          <dt>출처</dt><dd>{{ metric.source|default:"출처 확인 불가" }}</dd>
+          <dt>기준 기간</dt><dd>{{ metric.period|default:"기준 기간 확인 불가" }}</dd>
+        </dl>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+  {% empty %}
+  <p class="empty">표시할 지표 자료가 없습니다.</p>
+  {% endfor %}
+  {% if result.indicators.dataGaps %}
+  <details style="margin-top:16px"><summary>지표 데이터 한계</summary><ul>{% for gap in result.indicators.dataGaps %}<li>{{ gap }}</li>{% endfor %}</ul></details>
+  {% endif %}
+</section>
+
+<section id="valuation-panel" class="panel" style="margin-bottom:16px" aria-labelledby="valuation-title">
+  <h2 id="valuation-title">가정별 가치평가</h2>
+  <p class="dim">직접 입력한 배수·성장률로 방법별 주당 가치를 비교합니다. 증권사 컨센서스 목표가가 아니며, 위의 ATR 목표 참고가와 계산 목적이 다릅니다.</p>
+  <p class="help">재계산에는 AI나 외부 데이터 호출이 없으며 유료 API를 사용하지 않습니다. 가정은 자동으로 채우지 않습니다. 원하는 방법에 필요한 값만 입력하세요.</p>
+  {{ result.valuation_inputs|json_script:"valuation-input-data" }}
+  <details><summary>계산에 사용하는 종목 데이터</summary><dl id="valuation-input-summary"></dl></details>
+  <form id="valuation-form" aria-describedby="valuation-status">
+    {% csrf_token %}
+    <fieldset><legend>비교 배수</legend>
+      <div class="assumption-grid">
+        <label for="target-pe">적용 PER (배)<input id="target-pe" name="target_pe" type="number" min="0" step="any" inputmode="decimal" aria-describedby="pe-help"></label>
+        <label for="target-pb">적용 PBR (배)<input id="target-pb" name="target_pb" type="number" min="0" step="any" inputmode="decimal" aria-describedby="pb-help"></label>
+        <label for="target-ev-ebitda">적용 EV/EBITDA (배)<input id="target-ev-ebitda" name="target_ev_ebitda" type="number" min="0" step="any" inputmode="decimal" aria-describedby="ev-help"></label>
+      </div>
+      <details><summary>PER·PBR·EV/EBITDA란?</summary>
+        <p id="pe-help">PER은 주가를 주당순이익(EPS)으로 나눈 배수입니다. 적용 PER × EPS로 주당 가치를 계산합니다.</p>
+        <p id="pb-help">PBR은 주가를 주당순자산(BPS)으로 나눈 배수입니다. 적용 PBR × BPS로 주당 가치를 계산합니다.</p>
+        <p id="ev-help">EV/EBITDA는 기업가치를 이자·세금·감가상각 전 이익으로 나눈 배수입니다. EBITDA × 적용 배수에 현금을 더하고 부채를 차감한 뒤 주식 수로 나눕니다.</p>
+        <p>배수의 적정 수준은 업종·성장률·재무 위험에 따라 달라집니다. 비교 기업이나 보고서의 기준 기간을 확인해 입력하세요.</p>
+      </details>
+    </fieldset>
+    <fieldset><legend>DCF · 현금흐름 할인</legend>
+      <div class="assumption-grid">
+        <label for="valuation-fcff">연간 FCFF (종목 통화 전체 금액)<input id="valuation-fcff" name="fcff" type="number" step="any" inputmode="decimal" aria-describedby="dcf-help"></label>
+        <label for="valuation-growth">향후 5년 연간 성장률 (%)<input id="valuation-growth" name="growth_pct" type="number" step="any" inputmode="decimal" aria-describedby="dcf-help"></label>
+        <label for="valuation-discount">WACC · 할인율 (%)<input id="valuation-discount" name="discount_pct" type="number" step="any" inputmode="decimal" aria-describedby="dcf-help"></label>
+        <label for="valuation-terminal">5년 이후 영구성장률 (%)<input id="valuation-terminal" name="terminal_growth_pct" type="number" step="any" inputmode="decimal" aria-describedby="dcf-help"></label>
+      </div>
+      <details><summary>FCFF·WACC·DCF란?</summary>
+        <div id="dcf-help">
+          <p>FCFF는 영업과 재투자 후 주주와 채권자에게 귀속될 기업의 잉여현금흐름입니다. 주당 금액이나 백만원 단위가 아닌, 표시된 종목 통화의 연간 전체 금액을 입력하세요.</p>
+          <p>WACC는 자기자본과 부채 조달비용을 가중 평균한 할인율입니다. DCF는 향후 현금흐름과 5년 이후 잔존가치를 현재가치로 할인하고, 현금·부채·주식 수를 반영해 주당 가치를 구합니다.</p>
+          <p>영구성장률은 할인율보다 낮아야 합니다. 성장률과 할인율의 작은 차이로 결과가 크게 달라질 수 있습니다.</p>
+        </div>
+      </details>
+    </fieldset>
+    <div class="actions"><button type="submit" class="primary">가정으로 가치 재계산</button></div>
+    <p id="valuation-status" role="status" aria-live="polite">가정을 입력하면 계산할 수 있습니다.</p>
+    <div id="valuation-error" role="alert" class="neg"></div>
+  </form>
+  <div id="valuation-results" aria-label="가치평가 계산 결과" aria-busy="false"></div>
+  <noscript><p class="empty">가치평가 재계산을 사용하려면 JavaScript를 활성화하세요.</p></noscript>
+</section>
+
+<script>
+(() => {
+  const form = document.getElementById('valuation-form');
+  const raw = document.getElementById('valuation-input-data');
+  if (!form || !raw) return;
+  const inputs = JSON.parse(raw.textContent) || {};
+  const status = document.getElementById('valuation-status');
+  const error = document.getElementById('valuation-error');
+  const results = document.getElementById('valuation-results');
+  const submit = form.querySelector('button[type="submit"]');
+  const fmt = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 });
+  const node = (tag, value, className = '') => {
+    const element = document.createElement(tag);
+    element.textContent = value;
+    if (className) element.className = className;
+    return element;
+  };
+  const fields = {price:'기준 가격',currency:'통화',eps:'주당순이익 (EPS)',book_value_per_share:'주당순자산 (BPS)',ebitda:'EBITDA',cash:'현금',debt:'부채',shares:'주식 수'};
+  const summary = document.getElementById('valuation-input-summary');
+  Object.entries(fields).forEach(([key, label]) => {
+    const value = inputs[key];
+    summary.append(node('dt', label), node('dd', Number.isFinite(value) ? fmt.format(value) : (key === 'currency' && value ? String(value) : '자료 부족')));
+  });
+  if (inputs.notes) summary.append(node('dt', '기준과 한계'), node('dd', inputs.notes));
+  Object.entries(inputs.periods || {}).forEach(([key, period]) => {
+    const labels = {annual_ebitda:'EBITDA 결산일', cash:'현금 결산일', debt:'차입금 결산일'};
+    summary.append(node('dt', labels[key] || key), node('dd', period || '기준일 미제공'));
+  });
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (submit.disabled) return;
+    const assumptions = {};
+    error.textContent = '';
+    results.replaceChildren();
+    for (const input of form.querySelectorAll('input[type="number"]')) {
+      if (input.value.trim() === '') continue;
+      if (!Number.isFinite(input.valueAsNumber)) {
+        error.textContent = '가정에 유효한 숫자를 입력해 주세요.';
+        input.focus();
+        return;
+      }
+      assumptions[input.name] = input.valueAsNumber;
+    }
+    if (!Object.keys(assumptions).length) {
+      status.textContent = '계산할 가정을 하나 이상 입력해 주세요.';
+      return;
+    }
+    submit.disabled = true;
+    results.setAttribute('aria-busy', 'true');
+    status.textContent = '입력한 가정으로 계산 중입니다…';
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch('/api/research/valuation', {
+        method:'POST', credentials:'same-origin', signal:controller.signal,
+        headers:{'Content-Type':'application/json', 'X-CSRFToken':form.querySelector('[name="csrfmiddlewaretoken"]').value},
+        body:JSON.stringify({inputs, assumptions}),
+      });
+      let payload;
+      try { payload = await response.json(); } catch { throw new Error('계산 응답을 읽을 수 없습니다. 잠시 후 다시 시도해 주세요.'); }
+      if (!response.ok) throw new Error(payload.error || '계산 요청을 처리하지 못했습니다.');
+      if (!Array.isArray(payload.methods)) throw new Error('계산 결과 형식이 올바르지 않습니다.');
+      payload.methods.forEach(method => {
+        const section = node('article', '', 'valuation-method');
+        section.append(node('h3', method.method));
+        section.append(node('strong', Number.isFinite(method.value) ? `${fmt.format(method.value)} ${inputs.currency || ''}` : '계산 불가', 'num'));
+        if (Number.isFinite(method.upside_pct)) section.append(node('p', `기준 가격 대비 ${fmt.format(method.upside_pct)}%`));
+        if (method.formula) section.append(node('p', method.formula, 'help'));
+        if (method.reason) section.append(node('p', method.reason, 'dim'));
+        results.append(section);
+      });
+      if (Array.isArray(payload.dataGaps) && payload.dataGaps.length) {
+        const gaps = node('ul', '');
+        payload.dataGaps.forEach(gap => gaps.append(node('li', gap)));
+        results.append(node('h3', '계산 데이터 한계'), gaps);
+      }
+      status.textContent = payload.methods.length ? '계산이 완료되었습니다. 가정을 변경해 다시 계산할 수 있습니다.' : '계산 가능한 방법이 없습니다. 입력값과 데이터 한계를 확인하세요.';
+    } catch (failure) {
+      error.textContent = failure.name === 'AbortError' ? '계산 응답 시간이 초과되었습니다. 다시 시도해 주세요.' : failure.message;
+      status.textContent = '계산이 완료되지 않았습니다. 입력값을 확인하고 다시 시도해 주세요.';
+    } finally {
+      window.clearTimeout(timeout);
+      submit.disabled = false;
+      results.setAttribute('aria-busy', 'false');
+    }
+  });
+})();
+</script>

@@ -46,9 +46,7 @@ def test_cooldown_cases_match(parity: dict) -> None:
         pytest.skip("정답지에 LLM 기준값이 없습니다.")
     for case in llm["cooldown"]:
         actual = cooldown_until(case["kind"], _dt(case["now"]))
-        assert _ms(actual) == case["until"], (
-            f"{case['kind']} at {_dt(case['now']).isoformat()}"
-        )
+        assert _ms(actual) == case["until"], f"{case['kind']} at {_dt(case['now']).isoformat()}"
 
 
 def test_quota_cooldown_stops_at_kst_midnight() -> None:
@@ -119,8 +117,10 @@ class _Client:
     def __init__(self, responses: list[_Response]) -> None:
         self.responses = responses
         self.calls = 0
+        self.requests: list[dict] = []
 
-    def post(self, *_: object, **__: object) -> _Response:
+    def post(self, *_: object, **kwargs: object) -> _Response:
+        self.requests.append(kwargs)
         response = self.responses[self.calls]
         self.calls += 1
         return response
@@ -129,17 +129,63 @@ class _Client:
 def test_llm_json_retries_a_transient_response_before_failing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client = _Client([
-        _Response(503, "temporary overload"),
-        _Response(200, "", {"choices": [{"message": {"content": '{"ok": true}'}}]}),
-    ])
+    client = _Client(
+        [
+            _Response(503, "temporary overload"),
+            _Response(200, "", {"choices": [{"message": {"content": '{"ok": true}'}}]}),
+        ]
+    )
     delays: list[float] = []
     monkeypatch.setattr("news.crawler.llm.time.sleep", delays.append)
 
-    parsed = llm_json(
-        client, LlmConfig("https://example.test", "key", "model", 5_000), "system", "user"
-    )
+    parsed = llm_json(client, LlmConfig("https://example.test", "key", "model", 5_000), "system", "user")
 
     assert parsed == {"ok": True}
     assert client.calls == 2
     assert delays == [1.0]
+
+
+def test_llm_json_retries_minute_quota_with_exponential_backoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _Client(
+        [
+            _Response(429, 'RESOURCE_EXHAUSTED quota metric "requests per minute"'),
+            _Response(429, 'RESOURCE_EXHAUSTED quota metric "tokens per minute"'),
+            _Response(200, "", {"choices": [{"message": {"content": '{"ok": true}'}}]}),
+        ]
+    )
+    delays: list[float] = []
+    monkeypatch.setattr("news.crawler.llm.time.sleep", delays.append)
+
+    assert llm_json(client, LlmConfig("https://example.test", "key", "model", 5_000), "system", "user") == {
+        "ok": True
+    }
+    assert delays == [1.0, 2.0]
+
+
+def test_llm_json_does_not_retry_daily_quota(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _Client([_Response(429, "GenerateRequestsPerDayPerProject RPD exceeded")])
+    delays: list[float] = []
+    monkeypatch.setattr("news.crawler.llm.time.sleep", delays.append)
+
+    with pytest.raises(LlmError, match="429"):
+        llm_json(client, LlmConfig("https://example.test", "key", "model", 5_000), "system", "user")
+    assert client.calls == 1
+    assert delays == []
+
+
+def test_gemini_uses_low_reasoning_effort() -> None:
+    client = _Client([_Response(200, "", {"choices": [{"message": {"content": '{"ok": true}'}}]})])
+    llm_json(
+        client,
+        LlmConfig(
+            "https://generativelanguage.googleapis.com/v1beta/openai",
+            "key",
+            "gemini-3.7-flash",
+            5_000,
+        ),
+        "system",
+        "user",
+    )
+    assert client.requests[0]["json"]["reasoning_effort"] == "low"

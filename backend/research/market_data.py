@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,6 +12,7 @@ import yfinance as yf
 
 from research.analysis import Evidence
 from research.symbols import route_symbol, yfinance_candidates
+from research.technical_indicators import technical_metrics
 
 
 class MarketDataError(RuntimeError):
@@ -84,6 +85,8 @@ class MarketSnapshot:
     total_debt: float | None
     operating_cash_flow: float | None
     capital_expenditure: float | None
+    technical: dict[str, float | None] = field(default_factory=dict)
+    financial_details: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         result = asdict(self)
@@ -184,9 +187,7 @@ def price_chart_points(
             ma_60=average(index, 60),
             ma_100=average(index, 100),
         )
-        for index, (date, open_price, high, low, close) in enumerate(
-            daily[start:], start=start
-        )
+        for index, (date, open_price, high, low, close) in enumerate(daily[start:], start=start)
     )
 
 
@@ -204,11 +205,16 @@ def _latest_statement_value(frame: Any, labels: tuple[str, ...]) -> tuple[float 
 
 
 def _statement_values(ticker: Any) -> tuple[dict[str, float | None], str]:
-    frames = {
-        "income": ticker.income_stmt,
-        "balance": ticker.balance_sheet,
-        "cashflow": ticker.cashflow,
-    }
+    frames = {}
+    for name, attribute in (
+        ("income", "income_stmt"),
+        ("balance", "balance_sheet"),
+        ("cashflow", "cashflow"),
+    ):
+        try:
+            frames[name] = getattr(ticker, attribute)
+        except Exception:
+            frames[name] = None
     definitions = {
         "total_revenue": ("income", ("Total Revenue", "Operating Revenue")),
         "net_income": ("income", ("Net Income", "Net Income Common Stockholders")),
@@ -233,6 +239,61 @@ def _statement_values(ticker: Any) -> tuple[dict[str, float | None], str]:
     return result, max(periods, default="")
 
 
+def _financial_details(ticker: Any, info: dict) -> dict[str, Any]:
+    """추가 지표의 연간 재무값은 동일 결산 열에서 읽고 누락은 그대로 둔다."""
+    result = {
+        key: _finite(info.get(key))
+        for key in (
+            "trailingEps",
+            "forwardEps",
+            "forwardPE",
+            "bookValue",
+            "sharesOutstanding",
+            "enterpriseToEbitda",
+            "returnOnEquity",
+            "returnOnAssets",
+            "operatingMargins",
+        )
+    }
+    result["financialCurrency"] = str(info.get("financialCurrency") or "")
+    definitions = {
+        "income_stmt": {"annual_ebitda": ("EBITDA",), "annual_income": ("Net Income",)},
+        "balance_sheet": {
+            "cash": ("Cash Cash Equivalents And Short Term Investments", "Cash And Cash Equivalents"),
+            "debt": ("Total Debt",),
+            "equity": ("Stockholders Equity",),
+            "current_assets": ("Current Assets",),
+            "current_liabilities": ("Current Liabilities",),
+        },
+        "cashflow": {
+            "ocf": ("Operating Cash Flow", "Cash Flow From Continuing Operating Activities"),
+            "capex": ("Capital Expenditure",),
+        },
+    }
+    for attribute, fields in definitions.items():
+        try:
+            frame = getattr(ticker, attribute)
+            if frame is None or frame.empty:
+                continue
+            column = max(frame.columns)
+            period = column.date().isoformat() if hasattr(column, "date") else str(column)
+            for key, labels in fields.items():
+                result[key] = next(
+                    (
+                        value
+                        for label in labels
+                        if label in frame.index
+                        if (value := _finite(frame.at[label, column])) is not None
+                    ),
+                    None,
+                )
+                result[f"{key}_period"] = period
+        except Exception:
+            # 보조 지표 누락이 종목 분석 전체를 중단시키지 않는다.
+            continue
+    return result
+
+
 def _news_evidence(ticker: Any, available_at: str, limit: int = 8) -> list[Evidence]:
     result: list[Evidence] = []
     for row in ticker.news[:limit]:
@@ -248,8 +309,11 @@ def _news_evidence(ticker: Any, available_at: str, limit: int = 8) -> list[Evide
         url = canonical.get("url") if isinstance(canonical, dict) else content.get("link") or ""
         raw_date = content.get("pubDate") or content.get("providerPublishTime")
         try:
-            observed_at = (datetime.fromtimestamp(raw_date, UTC).isoformat()
-                           if isinstance(raw_date, (int, float)) else str(raw_date or ""))
+            observed_at = (
+                datetime.fromtimestamp(raw_date, UTC).isoformat()
+                if isinstance(raw_date, (int, float))
+                else str(raw_date or "")
+            )
         except (ValueError, OverflowError, OSError):
             observed_at = ""
         result.append(
@@ -290,7 +354,9 @@ def _load_ticker(candidates: tuple[str, ...]) -> tuple[str, Any, Any]:
 
 
 def fetch_market_snapshot(
-    symbol: str, *, news_errors: list[str] | None = None,
+    symbol: str,
+    *,
+    news_errors: list[str] | None = None,
     news_loader: Callable[[Any, str], list[Evidence]] | None = None,
 ) -> tuple[MarketSnapshot, list[Evidence]]:
     """Yahoo Finance 공개 데이터로 현재 스냅샷과 AI 입력 근거를 만든다."""
@@ -303,8 +369,11 @@ def fetch_market_snapshot(
     except Exception as reason:
         raise MarketDataError(f"시장 데이터 조회에 실패했습니다: {reason}") from reason
     try:
-        news = (news_loader(ticker, available_at) if news_loader
-                else _news_evidence(ticker, available_at, limit=50))
+        news = (
+            news_loader(ticker, available_at)
+            if news_loader
+            else _news_evidence(ticker, available_at, limit=50)
+        )
     except Exception:
         news = []
         if news_errors is not None:
@@ -369,6 +438,8 @@ def fetch_market_snapshot(
         gross_margin_pct=_pct(info.get("grossMargins")),
         profit_margin_pct=_pct(info.get("profitMargins")),
         financial_period=financial_period,
+        technical=technical_metrics(history["Close"].tolist(), history["Volume"].tolist()),
+        financial_details=_financial_details(ticker, info),
         **financials,
     )
     market_summary = (
@@ -379,9 +450,10 @@ def fetch_market_snapshot(
         f"시가총액 {snapshot.market_cap}; 20일선 {averages.ma_20}, 60일선 {averages.ma_60}, "
         f"100일선 {averages.ma_100}; 이평 배열 {averages.alignment}."
     )
-    financial_summary = "; ".join(
-        f"{name}={value}" for name, value in financials.items() if value is not None
-    ) or "공개 재무제표 값을 가져오지 못함"
+    financial_summary = (
+        "; ".join(f"{name}={value}" for name, value in financials.items() if value is not None)
+        or "공개 재무제표 값을 가져오지 못함"
+    )
     evidence = [
         Evidence(
             id="market:price-and-risk",

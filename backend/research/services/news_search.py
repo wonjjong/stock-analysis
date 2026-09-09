@@ -20,6 +20,8 @@ from research.stock_news import NewsItem, StockNewsQuery
 MAX_RESULTS = 50
 MAX_RESPONSE_BYTES = 512 * 1024
 REQUEST_TIMEOUT = 5.0
+GDELT_TIMEOUT = 15.0
+GDELT_RETRY_DELAY = 5.0
 
 
 class NewsSearchError(RuntimeError):
@@ -28,6 +30,10 @@ class NewsSearchError(RuntimeError):
 
 class NewsSearchUnavailable(NewsSearchError):
     """Provider credentials are not configured."""
+
+
+class NewsSearchRateLimited(NewsSearchError):
+    """Provider가 호출 빈도 제한을 반환했다."""
 
 
 def _text(value: object) -> str:
@@ -73,9 +79,10 @@ class _HttpNewsSearch:
 
     def _get(
         self, url: str, params: dict, headers: dict | None = None, *, deadline: float | None = None,
+        request_timeout: float = REQUEST_TIMEOUT,
     ) -> dict:
         def read(client: httpx.Client) -> dict:
-            remaining = REQUEST_TIMEOUT
+            remaining = request_timeout
             if deadline is not None:
                 remaining = min(remaining, deadline - time.monotonic())
             if remaining <= 0:
@@ -83,6 +90,10 @@ class _HttpNewsSearch:
             with client.stream(
                 "GET", url, params=params, headers=headers, timeout=remaining,
             ) as response:
+                if response.status_code == 429:
+                    raise NewsSearchRateLimited(
+                        f"{self.provider}: 제공자 요청 빈도 제한(HTTP 429). 잠시 후 다시 시도해 주세요."
+                    )
                 response.raise_for_status()
                 body = bytearray()
                 for chunk in response.iter_bytes():
@@ -169,12 +180,26 @@ class GdeltNewsSearch(_HttpNewsSearch):
         if not terms:
             return ()
         expression = " OR ".join(f'"{term}"' for term in terms)
-        payload = self._get("https://api.gdeltproject.org/api/v2/doc/doc", {
+        params = {
             "query": f"({expression})" if len(terms) > 1 else expression,
-            "mode": "artlist", "format": "json", "maxrecords": MAX_RESULTS,
+            "mode": "artlist", "format": "json", "maxrecords": 12,
             "sort": "datedesc", "startdatetime": query.since.astimezone(UTC).strftime("%Y%m%d%H%M%S"),
             "enddatetime": query.until.astimezone(UTC).strftime("%Y%m%d%H%M%S"),
-        }, deadline=time.monotonic() + 12)
+        }
+        deadline = time.monotonic() + 24
+        try:
+            payload = self._get(
+                "https://api.gdeltproject.org/api/v2/doc/doc", params,
+                deadline=deadline, request_timeout=GDELT_TIMEOUT,
+            )
+        except NewsSearchRateLimited:
+            # GDELT 공용 API는 5초당 1회 제한을 안내한다. 한 번만 기다린 뒤 재시도하고,
+            # 계속 거절되면 호출자에게 명확한 제한 원인을 전달한다.
+            time.sleep(GDELT_RETRY_DELAY)
+            payload = self._get(
+                "https://api.gdeltproject.org/api/v2/doc/doc", params,
+                deadline=deadline, request_timeout=GDELT_TIMEOUT,
+            )
         rows = payload.get("articles")
         if not isinstance(rows, list):
             raise NewsSearchError("GDELT: 기사 목록 응답 누락")

@@ -25,7 +25,7 @@ def test_moving_averages_reports_a_bearish_alignment_and_missing_history() -> No
 
 def test_price_chart_points_keeps_recent_history_with_rolling_averages() -> None:
     rows = [
-        (f"2026-01-{day:03d}", float(day - .5), float(day + .5), float(day - 1), float(day))
+        (f"2026-01-{day:03d}", float(day - 0.5), float(day + 0.5), float(day - 1), float(day))
         for day in range(1, 151)
     ]
 
@@ -40,3 +40,37 @@ def test_price_chart_points_keeps_recent_history_with_rolling_averages() -> None
     assert points[-1].ma_20 == 140.5
     assert points[-1].ma_60 == 120.5
     assert points[-1].ma_100 == 100.5
+
+
+def test_extra_financials_keep_latest_period_and_try_valid_alias():
+    from types import SimpleNamespace
+
+    import pandas as pd
+
+    from research.market_data import _financial_details
+
+    frame = pd.DataFrame(
+        {pd.Timestamp("2025-12-31"): [float("nan"), 100, 0], pd.Timestamp("2024-12-31"): [200, 200, 10]},
+        index=["Cash Cash Equivalents And Short Term Investments", "Cash And Cash Equivalents", "Total Debt"],
+    )
+    ticker = SimpleNamespace(balance_sheet=frame, income_stmt=pd.DataFrame(), cashflow=pd.DataFrame())
+    details = _financial_details(ticker, {"financialCurrency": "USD", "trailingEps": float("nan")})
+    assert details["cash"] == 100
+    assert details["cash_period"] == "2025-12-31"
+    assert details["debt"] == 0
+    assert details["trailingEps"] is None
+
+
+def test_unavailable_optional_statements_remain_missing():
+    from research.market_data import _financial_details, _statement_values
+
+    class UnavailableTicker:
+        def __getattr__(self, name):
+            raise RuntimeError("statement provider unavailable")
+
+    details = _financial_details(UnavailableTicker(), {"trailingEps": 5})
+    assert details["trailingEps"] == 5
+    assert "cash" not in details
+    financials, period = _statement_values(UnavailableTicker())
+    assert all(value is None for value in financials.values())
+    assert period == ""

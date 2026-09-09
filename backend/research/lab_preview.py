@@ -8,9 +8,11 @@ from math import sin
 from typing import Any
 
 from research.analysis import Evidence, LiveStockReport
+from research.indicators import build_indicators, valuation_inputs
 from research.market_data import MarketSnapshot, moving_averages, price_chart_points
 from research.recommendation import MacroRegime, trade_plan
 from research.scoring import score_snapshot
+from research.technical_indicators import technical_metrics
 
 
 def build_lab_preview() -> dict[str, Any]:
@@ -19,13 +21,11 @@ def build_lab_preview() -> dict[str, Any]:
     rows: list[tuple[str, float, float, float, float]] = []
     previous = 118.0
     for index in range(140):
-        close = 118 + index * .22 + sin(index / 6) * 2.8
-        opening = previous + sin(index * 1.7) * .8
+        close = 118 + index * 0.22 + sin(index / 6) * 2.8
+        opening = previous + sin(index * 1.7) * 0.8
         high = max(opening, close) + 1.15
         low = min(opening, close) - 1.15
-        rows.append(
-            ((started_at + timedelta(days=index)).isoformat(), opening, high, low, close)
-        )
+        rows.append(((started_at + timedelta(days=index)).isoformat(), opening, high, low, close))
         previous = close
 
     price = rows[-1][4]
@@ -39,7 +39,7 @@ def build_lab_preview() -> dict[str, Any]:
         observed_at=rows[-1][0],
         price=price,
         market_cap=12_400_000_000,
-        return_1d_pct=.4,
+        return_1d_pct=0.4,
         return_1m_pct=4.8,
         return_6m_pct=18.2,
         return_1y_pct=25.6,
@@ -65,6 +65,30 @@ def build_lab_preview() -> dict[str, Any]:
         total_debt=1_100_000_000,
         operating_cash_flow=510_000_000,
         capital_expenditure=-220_000_000,
+        technical=technical_metrics([row[4] for row in rows], [4_800_000] * len(rows)),
+        financial_details={
+            "financialCurrency": "USD",
+            "trailingEps": 6.8,
+            "forwardPE": 19.2,
+            "bookValue": 47.0,
+            "sharesOutstanding": 84_000_000,
+            "enterpriseToEbitda": 17.9,
+            "returnOnEquity": 0.16,
+            "returnOnAssets": 0.09,
+            "operatingMargins": 0.18,
+            "annual_ebitda": 720_000_000,
+            "cash": 610_000_000,
+            "debt": 1_100_000_000,
+            "equity": 4_000_000_000,
+            "current_assets": 1_800_000_000,
+            "current_liabilities": 900_000_000,
+            "ocf": 510_000_000,
+            "capex": -220_000_000,
+            **{
+                f"{key}_period": "2025-12-31"
+                for key in ("ocf", "capex", "cash", "debt", "equity", "current_assets", "annual_ebitda")
+            },
+        },
     )
     scores = score_snapshot(snapshot.as_dict(), sentiment_scores=[62, 57, 66])
     plan = trade_plan(snapshot.price, snapshot.atr_20 or 0.0, MacroRegime(19, 0, 4, 0))
@@ -88,11 +112,18 @@ def build_lab_preview() -> dict[str, Any]:
             summary="UI 확인용 고정 재무 데이터입니다.",
         ),
     ]
-    evidence.extend(Evidence(
-        id=f"preview:news:{provider}", kind="news", title=f"샘플 종목 뉴스 · {provider}",
-        source=provider, observed_at=snapshot.observed_at, available_at=snapshot.observed_at,
-        summary="UI 확인용 가상 뉴스입니다.",
-    ) for provider in ("DB", "Yahoo", "GDELT"))
+    evidence.extend(
+        Evidence(
+            id=f"preview:news:{provider}",
+            kind="news",
+            title=f"샘플 종목 뉴스 · {provider}",
+            source=provider,
+            observed_at=snapshot.observed_at,
+            available_at=snapshot.observed_at,
+            summary="UI 확인용 가상 뉴스입니다.",
+        )
+        for provider in ("DB", "Yahoo", "GDELT")
+    )
     report = LiveStockReport(
         symbol=snapshot.symbol,
         stance="중립",
@@ -111,11 +142,22 @@ def build_lab_preview() -> dict[str, Any]:
             "report": report,
             "scores": scores,
             "trade_plan": plan,
+            "indicators": build_indicators(snapshot.as_dict()),
+            "valuation_inputs": valuation_inputs(snapshot.as_dict()),
             "news_search": {
-                "periodDays": 30, "count": 3, "cacheTtlSeconds": 1200, "dataGaps": [],
+                "periodDays": 30,
+                "count": 3,
+                "cacheTtlSeconds": 1200,
+                "dataGaps": [],
                 "providers": [
-                    {"provider": name, "status": "success", "fetched": 1,
-                     "accepted": 1, "cached": name == "GDELT", "detail": "미리보기 샘플"}
+                    {
+                        "provider": name,
+                        "status": "success",
+                        "fetched": 1,
+                        "accepted": 1,
+                        "cached": name == "GDELT",
+                        "detail": "미리보기 샘플",
+                    }
                     for name in ("DB", "Yahoo", "GDELT")
                 ],
             },

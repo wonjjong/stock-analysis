@@ -1,4 +1,8 @@
-# Lead Agent 호출 프롬프트
+# Lead Agent 호출 프롬프트 (참고용)
+
+> 일반 프롬프트에서는 이 파일을 복사하거나 `{TASK}`를 치환할 필요가 없다. Codex의
+> `lead-agent` Skill이 저장소 변경 요청을 Lead 흐름으로 자동 조정한다. 이 템플릿은 별도
+> 에이전트 위임 API에 명시적으로 프롬프트를 전달할 때만 사용한다.
 
 ```text
 너는 이 작업의 Lead Agent다. 먼저 저장소 루트의 AGENTS.md를 읽고

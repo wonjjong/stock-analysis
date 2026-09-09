@@ -93,7 +93,7 @@ class ProviderForm(forms.Form):
     )
     model = forms.CharField(
         label="모델명", max_length=120,
-        widget=forms.TextInput(attrs={"placeholder": "gemini-2.5-flash"}),
+        widget=forms.TextInput(attrs={"placeholder": "gemini-3.5-flash-lite"}),
     )
     api_key = forms.CharField(
         label="API 키",

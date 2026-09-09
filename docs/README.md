@@ -18,6 +18,7 @@
 | [데이터·보안 정책](policies/data-and-security.md) | 수집, 저작권, URL 안전성, 비밀값 | 적용 중/보완 필요 |
 | [운영 정책](policies/operations.md) | 실행, 장애 대응, 관측 | 적용 중 |
 | [품질 정책](policies/quality.md) | 테스트, parity, 마이그레이션 | 적용 중 |
+| [시니어 트레이더 에이전트](agents/senior_trader.md) | 가격·위험·이벤트 관점의 종목 분석 검토 | 사용 가능 |
 | [변경 이력](../CHANGELOG.md) | 공통 변경과 중요한 도메인 작업 이력 | 운영 기록 |
 
 ## 문서 갱신 규칙
@@ -28,3 +29,8 @@
 - 정책 문서는 코드가 강제하거나 운영자가 실제로 수행하는 규칙만 현재 정책으로 쓴다. 희망 사항은 `향후 결정 필요`로 적는다.
 - 화면·명령의 경로는 `backend/signalist/urls.py`와 `backend/news/management/commands/`를 기준으로 확인한다.
 루트 [README](../README.md)는 빠른 실행을, 이 디렉터리는 기능별 계약과 운영 기준을 다룬다.
+
+에이전트 호출 프롬프트는 `agents/prompts/`에 두며, 종목 분석 로직의 실효성과 금융 방법론
+검토에는 전역 Codex 스킬 `stock-analysis-review`를 사용한다. 저장소 변경 요청은 전역
+`lead-agent` Skill이 일반 프롬프트에서도 Lead 흐름으로 자동 조정하며, `{TASK}` 템플릿을
+수동 치환하지 않는다.
